@@ -1,0 +1,146 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module sqlite3_db</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>sqlite3_db</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/stuart/code/pensieve/server/data/sqlite3_db.py">/home/stuart/code/pensieve/server/data/sqlite3_db.py</a></font></td></tr></table>
+    <p><tt>history:<br>
+12/19&nbsp;-&nbsp;eliminate&nbsp;tableInits?<br>
+12/19/18&nbsp;-&nbsp;need&nbsp;to&nbsp;change&nbsp;categoryTable:preNodeId&nbsp;to&nbsp;preCatId</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="multiprocessing.html">multiprocessing</a><br>
+</td><td width="25%" valign=top><a href="sqlite3.html">sqlite3</a><br>
+</td><td width="25%" valign=top><a href="time.html">time</a><br>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="exceptions.html#BaseException">exceptions.BaseException</a>(<a href="__builtin__.html#object">__builtin__.object</a>)
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="sqlite3_db.html#AmbiguousNameException">AmbiguousNameException</a>
+</font></dt></dl>
+</dd>
+<dt><font face="helvetica, arial"><a href="sqlite3_db.html#DatabaseInterface">DatabaseInterface</a>
+</font></dt></dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="AmbiguousNameException">class <strong>AmbiguousNameException</strong></a>(<a href="exceptions.html#BaseException">exceptions.BaseException</a>)</font></td></tr>
+    
+<tr><td bgcolor="#ffc8d8"><tt>&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt>Method resolution order:</dt>
+<dd><a href="sqlite3_db.html#AmbiguousNameException">AmbiguousNameException</a></dd>
+<dd><a href="exceptions.html#BaseException">exceptions.BaseException</a></dd>
+<dd><a href="__builtin__.html#object">__builtin__.object</a></dd>
+</dl>
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<hr>
+Methods inherited from <a href="exceptions.html#BaseException">exceptions.BaseException</a>:<br>
+<dl><dt><a name="AmbiguousNameException-__delattr__"><strong>__delattr__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__delattr__">__delattr__</a>('name')&nbsp;&lt;==&gt;&nbsp;del&nbsp;x.name</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__getattribute__"><strong>__getattribute__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__getattribute__">__getattribute__</a>('name')&nbsp;&lt;==&gt;&nbsp;x.name</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__getitem__"><strong>__getitem__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__getitem__">__getitem__</a>(y)&nbsp;&lt;==&gt;&nbsp;x[y]</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__getslice__"><strong>__getslice__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__getslice__">__getslice__</a>(i,&nbsp;j)&nbsp;&lt;==&gt;&nbsp;x[i:j]<br>
+&nbsp;<br>
+Use&nbsp;of&nbsp;negative&nbsp;indices&nbsp;is&nbsp;not&nbsp;supported.</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__init__"><strong>__init__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__init__">__init__</a>(...)&nbsp;initializes&nbsp;x;&nbsp;see&nbsp;help(type(x))&nbsp;for&nbsp;signature</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__reduce__"><strong>__reduce__</strong></a>(...)</dt></dl>
+
+<dl><dt><a name="AmbiguousNameException-__repr__"><strong>__repr__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__repr__">__repr__</a>()&nbsp;&lt;==&gt;&nbsp;repr(x)</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__setattr__"><strong>__setattr__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__setattr__">__setattr__</a>('name',&nbsp;value)&nbsp;&lt;==&gt;&nbsp;x.name&nbsp;=&nbsp;value</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__setstate__"><strong>__setstate__</strong></a>(...)</dt></dl>
+
+<dl><dt><a name="AmbiguousNameException-__str__"><strong>__str__</strong></a>(...)</dt><dd><tt>x.<a href="#AmbiguousNameException-__str__">__str__</a>()&nbsp;&lt;==&gt;&nbsp;str(x)</tt></dd></dl>
+
+<dl><dt><a name="AmbiguousNameException-__unicode__"><strong>__unicode__</strong></a>(...)</dt></dl>
+
+<hr>
+Data descriptors inherited from <a href="exceptions.html#BaseException">exceptions.BaseException</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+</dl>
+<dl><dt><strong>args</strong></dt>
+</dl>
+<dl><dt><strong>message</strong></dt>
+</dl>
+<hr>
+Data and other attributes inherited from <a href="exceptions.html#BaseException">exceptions.BaseException</a>:<br>
+<dl><dt><strong>__new__</strong> = &lt;built-in method __new__ of type object&gt;<dd><tt>T.<a href="#AmbiguousNameException-__new__">__new__</a>(S,&nbsp;...)&nbsp;-&gt;&nbsp;a&nbsp;new&nbsp;object&nbsp;with&nbsp;type&nbsp;S,&nbsp;a&nbsp;subtype&nbsp;of&nbsp;T</tt></dl>
+
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="DatabaseInterface">class <strong>DatabaseInterface</strong></a></font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt>Reads&nbsp;and&nbsp;writes&nbsp;data&nbsp;to&nbsp;a&nbsp;set&nbsp;of&nbsp;tables&nbsp;which&nbsp;keep&nbsp;track&nbsp;of&nbsp;categories&nbsp;of&nbsp;notes.<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="DatabaseInterface-__init__"><strong>__init__</strong></a>(self, database_path_and_file_name, lock, in_memory<font color="#909090">=False</font>, create_new_database<font color="#909090">=False</font>)</dt></dl>
+
+<dl><dt><a name="DatabaseInterface-addNodes"><strong>addNodes</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>add&nbsp;the&nbsp;nodes&nbsp;to&nbsp;the&nbsp;table&nbsp;nodes,&nbsp;add&nbsp;information&nbsp;to&nbsp;preNodes,&nbsp;and&nbsp;if&nbsp;the&nbsp;category&nbsp;is&nbsp;new,&nbsp;add&nbsp;a&nbsp;new&nbsp;category<br>
+nodes:&nbsp;a&nbsp;list&nbsp;of&nbsp;nodes&nbsp;to&nbsp;be&nbsp;added&nbsp;to&nbsp;the&nbsp;nodes&nbsp;table&nbsp;and&nbsp;the&nbsp;preNodes&nbsp;table<br>
+category:&nbsp;the&nbsp;category&nbsp;for&nbsp;the&nbsp;preNodes&nbsp;table<br>
+pre_node_name,&nbsp;pre_node_id:<br>
+&nbsp;&nbsp;None,&nbsp;None:&nbsp;No&nbsp;preNode&nbsp;is&nbsp;specified,&nbsp;which&nbsp;is&nbsp;OK,&nbsp;just&nbsp;leave&nbsp;preNode&nbsp;data&nbsp;blank<br>
+&nbsp;&nbsp;'name',&nbsp;None:&nbsp;a&nbsp;name&nbsp;is&nbsp;specified,&nbsp;but&nbsp;no&nbsp;nodeId,&nbsp;so&nbsp;look&nbsp;up&nbsp;the&nbsp;nodeId&nbsp;corresponding&nbsp;to&nbsp;the&nbsp;name<br>
+&nbsp;&nbsp;None,&nbsp;nodeId:&nbsp;the&nbsp;nodeId&nbsp;is&nbsp;specified,&nbsp;so&nbsp;use&nbsp;that&nbsp;directly<br>
+&nbsp;&nbsp;'name',&nbsp;nodeId:&nbsp;both&nbsp;are&nbsp;specified,&nbsp;validate&nbsp;the&nbsp;name&nbsp;matches&nbsp;the&nbsp;nodeId<br>
+raises&nbsp;<a href="#AmbiguousNameException">AmbiguousNameException</a>&nbsp;if&nbsp;the&nbsp;category_name&nbsp;or&nbsp;pre_node_name&nbsp;is&nbsp;given&nbsp;without&nbsp;its&nbsp;corresponding&nbsp;id,&nbsp;and&nbsp;there&nbsp;are&nbsp;more&nbsp;than&nbsp;one&nbsp;id&nbsp;with&nbsp;the&nbsp;same&nbsp;name.</tt></dd></dl>
+
+<dl><dt><a name="DatabaseInterface-addNodesToCategory"><strong>addNodesToCategory</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>do&nbsp;not&nbsp;create&nbsp;a&nbsp;new&nbsp;category,&nbsp;reuse&nbsp;an&nbsp;existing&nbsp;category,&nbsp;just&nbsp;extend&nbsp;it&nbsp;with&nbsp;new&nbsp;nodes<br>
+calls&nbsp;addNodes&nbsp;with&nbsp;category_id&nbsp;specified.</tt></dd></dl>
+
+<dl><dt><a name="DatabaseInterface-addNotes"><strong>addNotes</strong></a>(self, table_name, notes)</dt><dd><tt>add&nbsp;new&nbsp;notes&nbsp;to&nbsp;the&nbsp;database</tt></dd></dl>
+
+<dl><dt><a name="DatabaseInterface-dumpTable"><strong>dumpTable</strong></a>(self, table_name)</dt></dl>
+
+<dl><dt><a name="DatabaseInterface-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt></dl>
+
+<dl><dt><a name="DatabaseInterface-getNodeIds"><strong>getNodeIds</strong></a>(self, name)</dt></dl>
+
+<dl><dt><a name="DatabaseInterface-getNodeInfo"><strong>getNodeInfo</strong></a>(self, node_name)</dt><dd><tt>returns&nbsp;all&nbsp;instances&nbsp;of&nbsp;node_name&nbsp;both&nbsp;for&nbsp;standard&nbsp;name&nbsp;and&nbsp;aliases.&nbsp;<br>
+if&nbsp;node_name&nbsp;exists:<br>
+&nbsp;&nbsp;return&nbsp;(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdA,&nbsp;nodeName,&nbsp;categoryId1,&nbsp;categoryName1,&nbsp;alias1,&nbsp;preNodeId1,&nbsp;preNodeName1,&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdA,&nbsp;nodeName,&nbsp;categoryId2,&nbsp;categoryName2,&nbsp;alias2,&nbsp;preNodeId2,&nbsp;preNodeName2,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdB,&nbsp;nodeName,&nbsp;categoryId3,&nbsp;categoryName3,&nbsp;alias3,&nbsp;preNodeId3,&nbsp;preNodeName3,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...&nbsp;,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
+else:<br>
+&nbsp;&nbsp;return&nbsp;()</tt></dd></dl>
+
+<dl><dt><a name="DatabaseInterface-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt></dl>
+
+<dl><dt><a name="DatabaseInterface-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database</tt></dd></dl>
+
+</td></tr></table></td></tr></table>
+</body></html>
