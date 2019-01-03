@@ -175,7 +175,7 @@ class DataStoragePathTest(unittest.TestCase):
         self.compareTuples('nodes', expCategoriesTuples, actCategoriesTuples, show)
         
     def test_06_getNodeInfo(self):
-        show = True
+        show = False
         if show: print('  test_06_getNodeInfo')
         expNodeInfo = (
             ('dog', ((4, 'dog', 1, 'animals', None, 1, 'farm'),)),
@@ -189,6 +189,8 @@ class DataStoragePathTest(unittest.TestCase):
             if show:
                 print('  expNodeInfo', expNodeInfo)
                 print('  actNodeInfo', actNodeInfo)
+            else:
+                self.assertEqual(expNodeInfo, actNodeInfo)
                 
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
