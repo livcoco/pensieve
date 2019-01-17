@@ -10,7 +10,7 @@ import multiprocessing
 import time
 from collections import OrderedDict
 
-class DatabaseInterface:
+class CategorizerData:
     '''
     Concepts:
       - category:
@@ -40,26 +40,26 @@ class DatabaseInterface:
         #textEdit = 'id INTEGER PRIMARY KEY UNIQUE NOT NULL, noteText BLOB'
         #videoEdit = 'id INTEGER PRIMARY KEY UNIQUE NOT NULL, noteText BLOB'
         #audioEdit = 'id INTEGER PRIMARY KEY UNIQUE NOT NULL, noteText BLOB'
-        self.columnSpecs = {
-            'nodes'   : 'nodeId INTEGER, pathRev INTEGER, name BLOB, dx INTEGER, dy INTEGER, lastPathRev INTEGER, PRIMARY KEY (nodeId, pathRev)',
-            'preNodes': 'nodeId INTEGER, pathRev INTEGER, preNodeId INTEGER, prePathRev INTEGER, categoryID INTEGER, nameAlias BLOB, lastPrePathRev INTEGER, PRIMARY KEY (nodeID, pathRev, preNodeId, prePathRev)',
+        self.columnSpecs = { #                                                                             Boolean
+            'nodes'   : 'nodeId INTEGER, pathRev INTEGER, name BLOB, dx INTEGER, dy INTEGER, latestPathRev INTEGER, PRIMARY KEY (nodeId, pathRev)',
+            'preNodes': 'nodeId INTEGER, pathRev INTEGER, preNodeId INTEGER, prePathRev INTEGER, categoryID INTEGER, nameAlias BLOB, latestPathRev INTEGER, PRIMARY KEY (nodeID, pathRev, preNodeId, prePathRev)',
             'categories': 'categoryId INTEGER, preCatId INTEGER, catName BLOB, PRIMARY KEY(categoryId, preCatId)',
         #    'newIdeas': 'id INTEGER PRIMARY KEY AUTOINCREMENT, noteText BLOB, date BLOB, owner BLOB',
         #    'toDo'    : 'id INTEGER PRIMARY KEY AUTOINCREMENT, noteText BLOB, date BLOB, owner BLOB, completeByDate BLOB'
         }
         self.sqlAdds = {
-            'nodes'   : 'INSERT INTO nodes (nodeId, pathRev, name, dx, dy, lastPathRev) VALUES (?, ?, ?, ?, ?, ?)',
-            'preNodes': 'INSERT INTO preNodes (nodeId, pathRev, preNodeId, prePathRev, categoryID, nameAlias, lastPrePathRev) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'nodes'   : 'INSERT INTO nodes (nodeId, pathRev, name, dx, dy, latestPathRev) VALUES (?, ?, ?, ?, ?, ?)',
+            'preNodes': 'INSERT INTO preNodes (nodeId, pathRev, preNodeId, prePathRev, categoryID, nameAlias, latestPathRev) VALUES (?, ?, ?, ?, ?, ?, ?)',
             'categories':'INSERT INTO categories (categoryId, preCatId, catName) VALUES (?, ?, ?)',
         }
         self.sqlDumps = {
-            'nodes' : 'SELECT nodeId, pathRev, name, dx, dy, lastPathRev from nodes',
-            'preNodes' : 'SELECT nodeId, pathRev, preNodeId, prePathRev, categoryID, nameAlias, lastPrePathRev from preNodes',
+            'nodes' : 'SELECT nodeId, pathRev, name, dx, dy, latestPathRev from nodes',
+            'preNodes' : 'SELECT nodeId, pathRev, preNodeId, prePathRev, categoryID, nameAlias, latestPathRev from preNodes',
             'categories' : 'SELECT categoryId, preCatId, catName from categories',
         }
         self.tableInits = {
-            'nodes'   : (0, 0, None, None, None, None),
-            'preNodes'   : (0, 0, None, None, None, None, None),
+            'nodes'   : (0, 0, None, None, None, 1),
+            'preNodes'   : (0, 0, None, None, None, None, 1),
             'categories' : (0, None, None),
         }
         if create_new_database:
@@ -78,9 +78,9 @@ class DatabaseInterface:
         returns all instances of node_name both for standard name and aliases. 
         if node_name exists:
           return (
-                  (nodeIdA, nodeName, categoryId1, categoryName1, alias1, preNodeId1, preNodeName1, 
-                  (nodeIdA, nodeName, categoryId2, categoryName2, alias2, preNodeId2, preNodeName2,
-                  (nodeIdB, nodeName, categoryId3, categoryName3, alias3, preNodeId3, preNodeName3,
+                  (nodeIdA, nodeName, categoryId1, categoryName1, alias1, preNodeId1, preNodeName1), 
+                  (nodeIdA, nodeName, categoryId2, categoryName2, alias2, preNodeId2, preNodeName2),
+                  (nodeIdB, nodeName, categoryId3, categoryName3, alias3, preNodeId3, preNodeName3),
                   ... ,
                  )
         else:
@@ -89,73 +89,40 @@ class DatabaseInterface:
 
         # get the data from 'nodes' for this node name
         nodesData = []
-        cursor = self.dbCursor.execute(r'SELECT nodeId, pathRev, lastPathRev FROM nodes WHERE name == "' + node_name + '"')
+        cursor = self.dbCursor.execute(r'SELECT nodeId FROM nodes WHERE name == "' + node_name + '" AND latestPathRev > 0')
         while True:
             data = cursor.fetchone()
             if not data:
                 break
-            nodesData.append(data)
-        #find only the latest valid revision data
-        latestNodesData = OrderedDict() #this way we can keep them in non-random order
-        obsoleteNodeIds = set()
-        for (nodeId, pathRev, lastPathRev) in nodesData:
-            if lastPathRev:
-                obsoleteNodeIds.add(lastPathRev)
-                continue #indicates this is an obsolete node
-            if nodeId not in latestNodesData.keys():
-                latestNodesData[nodeId] = [node_name, pathRev]
-            elif pathRev > latestNodesData[nodeId]:
-                latestNodesData[nodeId][1] = pathRev
-        # eliminate obsolete nodes
-        for obsoleteNodeId in obsoleteNodeIds:
-            latestNodesData.pop(obsoleteNodeId)
+            (nodeId, ) = data
+            nodesData.append( (nodeId, node_name) )
 
         # the node_name could be an alias, so get the data from preNodes
         preNodesData = []
-        cursor = self.dbCursor.execute(r'SELECT nodeId, pathRev, preNodeId, prePathRev, lastPrePathRev FROM preNodes WHERE nameAlias == "' + node_name + '"')
+        cursor = self.dbCursor.execute(r'SELECT nodeId FROM preNodes WHERE nameAlias == "' + node_name + '" AND latestPathRev > 0')
         while True:
             data = cursor.fetchone()
             if not data:
                 break
-            preNodesData.append(data)
-
-        #find only the latest valid revision data        
-        latestPreNodesData = OrderedDict() #this way we can keep them in non-random order
-        obsoletePreNodeIds = set()
-        for (nodeId, pathRev, preNodeId, prePathRev, lastPrePathRev) in preNodesData:
-            if lastPrePathRev:
-                obsoletePreNodeIds.add(preNodeId)
-                continue
-            if preNodeId not in latestPreNodesData:
-                latestPreNodesData[preNodeId] = prePathRev
-            elif prePathRev > latestsPreNodesData[preNodeId]:
-                latestPreNodesData[preNodeId] = prePathRev
-        # eliminate obsolete preNodes
-        for obsoletePreNodeId in obsoletePreNodeIds:
-            latestPreNodesData.pop(obsoleteNodeId)
+            
+            (nodeId, ) = data
+            preNodesData.append(nodeId)
 
         # get the preNodes names
-        for preNodeId in latestPreNodesData.keys():
-            prePathRev = latestPreNodesData[preNodeId]
-            cursor = self.dbCursor.execute(r'SELECT name FROM nodes WHERE nodeId == ' + str(preNodeId) + ' AND pathRev == ' + str(prePathRev))
+        for preNodeId in preNodesData:
+            cursor = self.dbCursor.execute(r'SELECT name FROM nodes WHERE nodeId == ' + str(preNodeId) + ' AND latestPathRev > 0')
             (name,) = cursor.fetchone()
-            latestPreNodesData[preNodeId] = [name, preNodeId]
+            nodesData.append( (preNodeId, name) )
         
-        # combine the latestPreNodesData with the latestNodesData
-        for preNodeId in latestPreNodesData.keys():
-            latestNodesData[preNodeId] = latestPreNodesData[preNodeId]
-            
         # get data from preNodes table
-        preNodesData = {}
         retData = []
-        for nodeId in latestNodesData.keys():
-            (name, pathRev) = latestNodesData[nodeId]
-            cursor = self.dbCursor.execute(r'SELECT preNodeId, prePathRev, categoryId, nameAlias from preNodes WHERE nodeId == "' + str(nodeId) + '" AND pathRev == "' + str(pathRev) + '"')
+        for (nodeId, name) in nodesData:
+            cursor = self.dbCursor.execute(r'SELECT preNodeId, categoryId, nameAlias from preNodes WHERE nodeId == ' + str(nodeId) + ' AND latestPathRev > 0')
             while True:
                 data = cursor.fetchone()
                 if not data:
                     break
-                (preNodeId, prePathRev, categoryId, nameAlias) = data
+                (preNodeId, categoryId, nameAlias) = data
                 #                                        catName                    preNodeName
                 retData.append( [nodeId, name, categoryId, None, nameAlias, preNodeId, None] )
 
@@ -177,9 +144,42 @@ class DatabaseInterface:
             retData[idx] = tuple(retData[idx])
 
         return tuple(retData)
+
+    # in progress 1/7/19
+    def addNode(self, node_name, pre_node_id = None, category_id = None, pre_cat_id = None):
+        '''
+        Add a single new node
+        If adding a simple node with no category or pre_node connection, just include the name.
+        If the node is to be categorized, one or more of preNode, category, preCategory must already exist.
+        This method is called after user has selected one or more of pre_node, category, pre_category, e.g. from the GUI.  Based on which particular preNode, category, preCategory the user selected, we know the pre_node_id, cat_id, pre_cat_id.
+        '''
+        pass
+
+    def addCategory(self, category_name, pre_cat_id = None):
+        '''
+        Add a single category.
+        If the category has a pre_category, e.g. category Species has pre_category Genus, the user selects the pre_category from the GUI, and the GUI provides the pre_cat_id based on the selection.
+        The category must be added before it is used for a node.
+        The pre_category must be added as a category before it is used as a pre_category.
+        '''
+        pass
+
+    def editNode(self, node_id, name = None, dx = None, dy = None):
+        '''
+        Given a node_id selected from the GUI, change one or more of name, dx, dy
+        '''
+        pass
+    
+    def editPreNode(self, node_id, pre_node_id_orig, pre_node_id_new = None, category_id_orig = None, category_id_new = None, name_alias = None, dx = None, dy = None):
+        '''
+        edit one of the connections from the node to a pre_node
+        pre_node_id and category_id are primary keys, so to change them, it is necessary to provide the originals as well as the new ids.
+        '''
+        pass
     
     def addNodesToCategory(self, nodes, category_name = None, category_id = None, pre_node_name = None, pre_node_id = None):
         '''
+        OBSOLETE
         do not create a new category, reuse an existing category, just extend it with new nodes
         calls addNodes with category_id specified.
         '''
@@ -201,6 +201,7 @@ class DatabaseInterface:
         
     def addNodes(self, nodes, category_name = None, category_id = None, pre_node_name = None, pre_node_id = None):
         '''
+        OBSOLETE
         add the nodes to the table nodes, add information to preNodes, and if the category is new, add a new category
         nodes: a list of nodes to be added to the nodes table and the preNodes table
         category: the category for the preNodes table
@@ -238,19 +239,21 @@ class DatabaseInterface:
             (prePathRev,) = cursor.fetchone()
         else:
             #find the nodeId and pathRev for the pre_node_name
-            cursor = self.dbCursor.execute('SELECT nodeId, pathRev, lastPathRev FROM nodes WHERE name == \"' + pre_node_name + '\"')
+#            cursor = self.dbCursor.execute('SELECT nodeId, pathRev, lastPathRev FROM nodes WHERE name == \"' + pre_node_name + '\"')
+            cursor = self.dbCursor.execute('SELECT nodeId, pathRev FROM nodes WHERE name == \"' + pre_node_name + '\" AND latestPathRev > 0')
             preNodeId, prePathRev = -1, -1
-            while True:
-                # bug: does not handle two entries with the same name, but different nodeIds
-                data = cursor.fetchone()
-                if data == None:
-                    break
-                (tmpPreNodeId, tmpPrePathRev, lastPathRev) = data
-                if lastPathRev:
-                    continue
-                if tmpPrePathRev > prePathRev:
-                    # get the latest revision of pre_node_name
-                    preNodeId, prePathRev = tmpPreNodeId, tmpPrePathRev
+#            while True:
+#                # bug: does not handle two entries with the same name, but different nodeIds
+            data = cursor.fetchone()
+#                if data == None:
+#                    break
+#                (tmpPreNodeId, tmpPrePathRev, lastPathRev) = data
+            (preNodeId, prePathRev) = data
+#                if lastPathRev:
+#                    continue
+#                if tmpPrePathRev > prePathRev:
+#                    # get the latest revision of pre_node_name
+#                    preNodeId, prePathRev = tmpPreNodeId, tmpPrePathRev
                     
         # set the category id, either by using and exsisting id (add new nodes to the category) or creating a new category
         if category_name == None and category_id == None:
@@ -269,17 +272,24 @@ class DatabaseInterface:
         # add the nodes to both the nodes table and the preNodes table
         dx, dy = 1, 0
         for node in nodes:
-            self.dbCursor.execute(self.sqlAdds['nodes'], (nodeId, pathRev, node, dx, dy, lastPathRev))
-            self.dbCursor.execute(self.sqlAdds['preNodes'], (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, None))
+#            self.dbCursor.execute(self.sqlAdds['nodes'], (nodeId, pathRev, node, dx, dy, lastPathRev))
+            self.dbCursor.execute(self.sqlAdds['nodes'], (nodeId, pathRev, node, dx, dy, 1))
+#            self.dbCursor.execute(self.sqlAdds['preNodes'], (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, None))
+            self.dbCursor.execute(self.sqlAdds['preNodes'], (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, 1))
             if show:
-                print('    added to nodes:', (nodeId, pathRev, node, dx, dy, lastPathRev))
-                print('    added to preNodes:', (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, None))
+#                print('    added to nodes:', (nodeId, pathRev, node, dx, dy, lastPathRev))
+                print('    added to nodes:', (nodeId, pathRev, node, dx, dy, 1))
+#                print('    added to preNodes:', (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, None))
+                print('    added to preNodes:', (nodeId, pathRev, preNodeId, prePathRev, categoryId, None, 1))
                 
             nodeId += 1
             dy += 1
         self.db.commit()
 
     def dumpTable(self, table_name):
+        '''
+        returns all of the data in a table as a list of tuples
+        '''
         dataTuples = []
         cursor = self.dbCursor.execute(self.sqlDumps[table_name])
         while True:
@@ -312,6 +322,7 @@ class DatabaseInterface:
 
     def addNotes(self, table_name, notes):
         '''
+        NOT IMPLEMENTED YET
         add new notes to the database
         '''
         show = True
@@ -350,6 +361,7 @@ class DatabaseInterface:
     def modifyNotes(self, table_name, notes):
         '''
         modify existing notes already in the database
+        not implemented
         '''
         self.lock.acquire()
 
@@ -379,6 +391,9 @@ class DatabaseInterface:
         return True
         
     def getNote(self, table_name, row_id):
+        '''
+        not implemented
+        '''
         show = False
         cursor = self.dbCursor.execute('SELECT noteText, date, owner FROM ' + table_name + ' WHERE id == ' + str(row_id))
         (noteText, date, owner) = cursor.fetchone()
@@ -386,6 +401,9 @@ class DatabaseInterface:
         return (noteText, date, owner)
     
     def findNotes(self, table_name):
+        '''
+        not implemented
+        '''
         pass
 
 class AmbiguousNameException(BaseException): pass

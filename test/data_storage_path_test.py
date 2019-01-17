@@ -8,14 +8,14 @@ history
 '''
 import unittest
 import multiprocessing
-from context import DatabaseInterface
+from context import CategorizerData
 import shutil
 
 class DataStoragePathTest(unittest.TestCase):
     def test_00_instantiate(self):
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
         
     def test_01_createFromScratch(self):
         path = './test.db'
@@ -25,24 +25,24 @@ class DataStoragePathTest(unittest.TestCase):
             pass
         
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock, create_new_database = True)
+        db = CategorizerData(path, lock, create_new_database = True)
         
     def test_02_addNodesWithNodeName(self):
         show = False
         if show: print('  test_02_addNodes')
         expNodesTuples = (
-            (0, 0, None, None, None, None),
-            (1, 1, 'farm', 1, 0, None),
-            (2, 2, 'horse', 1, 0, None),
-            (3, 2, 'pig', 1, 1, None),
-            (4, 2, 'dog', 1, 2, None),
+            (0, 0, None, None, None, 1),
+            (1, 1, 'farm', 1, 0, 1),
+            (2, 2, 'horse', 1, 0, 1),
+            (3, 2, 'pig', 1, 1, 1),
+            (4, 2, 'dog', 1, 2, 1),
         )
         expPreNodesTuples = (
-            (0, 0, None, None, None, None, None),
-            (1, 1, None, None, None, None, None),
-            (2, 2, 1, 1, 1, None, None),
-            (3, 2, 1, 1, 1, None, None),
-            (4, 2, 1, 1, 1, None, None),
+            (0, 0, None, None, None, None, 1),
+            (1, 1, None, None, None, None, 1),
+            (2, 2, 1, 1, 1, None, 1),
+            (3, 2, 1, 1, 1, None, 1),
+            (4, 2, 1, 1, 1, None, 1),
         )
         expCategoriesTuples = (
             (0, None, None),
@@ -50,7 +50,7 @@ class DataStoragePathTest(unittest.TestCase):
         )
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
         category = 'animals'
         nodes = ('horse', 'pig', 'dog')
         preNode = 'farm'
@@ -70,7 +70,7 @@ class DataStoragePathTest(unittest.TestCase):
         if show: print('  test_03_getNodeIds')
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
         expNodeId = (2,)
         actNodeId = db.getNodeIds('horse')
         if show:
@@ -85,26 +85,26 @@ class DataStoragePathTest(unittest.TestCase):
         show = False
         if show: print('  test_04_addNodesWithNodeId')
         expNodesTuples = (
-            (0, 0, None, None, None, None),
-            (1, 1, 'farm', 1, 0, None),
-            (2, 2, 'horse', 1, 0, None),
-            (3, 2, 'pig', 1, 1, None),
-            (4, 2, 'dog', 1, 2, None),
-            (5, 3, 'Quarter horse', 1, 0, None),
-            (6, 3, 'Mustang', 1, 1, None),
-            (7, 3, 'Appaloosa', 1, 2, None),
-            (8, 3, 'Morgan horse', 1, 3, None),
+            (0, 0, None, None, None, 1),
+            (1, 1, 'farm', 1, 0, 1),
+            (2, 2, 'horse', 1, 0, 1),
+            (3, 2, 'pig', 1, 1, 1),
+            (4, 2, 'dog', 1, 2, 1),
+            (5, 3, 'Quarter horse', 1, 0, 1),
+            (6, 3, 'Mustang', 1, 1, 1),
+            (7, 3, 'Appaloosa', 1, 2, 1),
+            (8, 3, 'Morgan horse', 1, 3, 1),
         )
         expPreNodesTuples = (
-            (0, 0, None, None, None, None, None),
-            (1, 1, None, None, None, None, None),
-            (2, 2, 1, 1, 1, None, None),
-            (3, 2, 1, 1, 1, None, None),
-            (4, 2, 1, 1, 1, None, None),
-            (5, 3, 2, 2, 2, None, None),
-            (6, 3, 2, 2, 2, None, None),
-            (7, 3, 2, 2, 2, None, None),
-            (8, 3, 2, 2, 2, None, None),
+            (0, 0, None, None, None, None, 1),
+            (1, 1, None, None, None, None, 1),
+            (2, 2, 1, 1, 1, None, 1),
+            (3, 2, 1, 1, 1, None, 1),
+            (4, 2, 1, 1, 1, None, 1),
+            (5, 3, 2, 2, 2, None, 1),
+            (6, 3, 2, 2, 2, None, 1),
+            (7, 3, 2, 2, 2, None, 1),
+            (8, 3, 2, 2, 2, None, 1),
         )
         expCategoriesTuples = (
             (0, None, None),
@@ -113,7 +113,7 @@ class DataStoragePathTest(unittest.TestCase):
         )
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
         nodeId = db.getNodeIds('horse')[0]
         category = 'Horse Breeds'
         nodes = ('Quarter horse', 'Mustang', 'Appaloosa', 'Morgan horse')
@@ -129,28 +129,28 @@ class DataStoragePathTest(unittest.TestCase):
         show = False
         if show: print('  test_05_addNodesToCategory')
         expNodesTuples = (
-            (0, 0, None, None, None, None),
-            (1, 1, 'farm', 1, 0, None),
-            (2, 2, 'horse', 1, 0, None),
-            (3, 2, 'pig', 1, 1, None),
-            (4, 2, 'dog', 1, 2, None),
-            (5, 3, 'Quarter horse', 1, 0, None),
-            (6, 3, 'Mustang', 1, 1, None),
-            (7, 3, 'Appaloosa', 1, 2, None),
-            (8, 3, 'Morgan horse', 1, 3, None),
-            (9, 4, 'sheep', 1, 0, None),
+            (0, 0, None, None, None, 1),
+            (1, 1, 'farm', 1, 0, 1),
+            (2, 2, 'horse', 1, 0, 1),
+            (3, 2, 'pig', 1, 1, 1),
+            (4, 2, 'dog', 1, 2, 1),
+            (5, 3, 'Quarter horse', 1, 0, 1),
+            (6, 3, 'Mustang', 1, 1, 1),
+            (7, 3, 'Appaloosa', 1, 2, 1),
+            (8, 3, 'Morgan horse', 1, 3, 1),
+            (9, 4, 'sheep', 1, 0, 1),
         )
         expPreNodesTuples = (
-            (0, 0, None, None, None, None, None),
-            (1, 1, None, None, None, None, None),
-            (2, 2, 1, 1, 1, None, None),
-            (3, 2, 1, 1, 1, None, None),
-            (4, 2, 1, 1, 1, None, None),
-            (5, 3, 2, 2, 2, None, None),
-            (6, 3, 2, 2, 2, None, None),
-            (7, 3, 2, 2, 2, None, None),
-            (8, 3, 2, 2, 2, None, None),
-            (9, 4, 1, 1, 1, None, None)
+            (0, 0, None, None, None, None, 1),
+            (1, 1, None, None, None, None, 1),
+            (2, 2, 1, 1, 1, None, 1),
+            (3, 2, 1, 1, 1, None, 1),
+            (4, 2, 1, 1, 1, None, 1),
+            (5, 3, 2, 2, 2, None, 1),
+            (6, 3, 2, 2, 2, None, 1),
+            (7, 3, 2, 2, 2, None, 1),
+            (8, 3, 2, 2, 2, None, 1),
+            (9, 4, 1, 1, 1, None, 1)
         )
         expCategoriesTuples = (
             (0, None, None),
@@ -159,7 +159,7 @@ class DataStoragePathTest(unittest.TestCase):
         )
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
         category = 'animals'
         nodes = ('sheep',)
         preNode = 'farm'
@@ -182,7 +182,7 @@ class DataStoragePathTest(unittest.TestCase):
         )
         path = './test.db'
         lock = multiprocessing.Lock()
-        db = DatabaseInterface(path, lock)
+        db = CategorizerData(path, lock)
 
         for (nodeName, expNodeInfo) in expNodeInfo:
             actNodeInfo = db.getNodeInfo(nodeName)
