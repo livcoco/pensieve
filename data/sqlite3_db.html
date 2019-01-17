@@ -37,7 +37,7 @@
 <dt><font face="helvetica, arial"><a href="sqlite3_db.html#AmbiguousNameException">AmbiguousNameException</a>
 </font></dt></dl>
 </dd>
-<dt><font face="helvetica, arial"><a href="sqlite3_db.html#DatabaseInterface">DatabaseInterface</a>
+<dt><font face="helvetica, arial"><a href="sqlite3_db.html#CategorizerData">CategorizerData</a>
 </font></dt></dl>
  <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
@@ -98,7 +98,7 @@ Data and other attributes inherited from <a href="exceptions.html#BaseException"
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
 <td colspan=3 valign=bottom>&nbsp;<br>
-<font color="#000000" face="helvetica, arial"><a name="DatabaseInterface">class <strong>DatabaseInterface</strong></a></font></td></tr>
+<font color="#000000" face="helvetica, arial"><a name="CategorizerData">class <strong>CategorizerData</strong></a></font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
 <td colspan=2><tt>Concepts:<br>
@@ -114,19 +114,19 @@ Reads&nbsp;and&nbsp;writes&nbsp;data&nbsp;to&nbsp;a&nbsp;set&nbsp;of&nbsp;tables
 The&nbsp;database&nbsp;maintains&nbsp;all&nbsp;historical&nbsp;versions&nbsp;so&nbsp;notes&nbsp;referring&nbsp;to&nbsp;an&nbsp;old&nbsp;path&nbsp;do&nbsp;not&nbsp;have&nbsp;to&nbsp;be&nbsp;updated<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="DatabaseInterface-__init__"><strong>__init__</strong></a>(self, database_path_and_file_name, lock, in_memory<font color="#909090">=False</font>, create_new_database<font color="#909090">=False</font>)</dt></dl>
+<dl><dt><a name="CategorizerData-__init__"><strong>__init__</strong></a>(self, database_path_and_file_name, lock, in_memory<font color="#909090">=False</font>, create_new_database<font color="#909090">=False</font>)</dt></dl>
 
-<dl><dt><a name="DatabaseInterface-addCategory"><strong>addCategory</strong></a>(self, category_name, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;category.<br>
+<dl><dt><a name="CategorizerData-addCategory"><strong>addCategory</strong></a>(self, category_name, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;category.<br>
 If&nbsp;the&nbsp;category&nbsp;has&nbsp;a&nbsp;pre_category,&nbsp;e.g.&nbsp;category&nbsp;Species&nbsp;has&nbsp;pre_category&nbsp;Genus,&nbsp;the&nbsp;user&nbsp;selects&nbsp;the&nbsp;pre_category&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;and&nbsp;the&nbsp;GUI&nbsp;provides&nbsp;the&nbsp;pre_cat_id&nbsp;based&nbsp;on&nbsp;the&nbsp;selection.<br>
 The&nbsp;category&nbsp;must&nbsp;be&nbsp;added&nbsp;before&nbsp;it&nbsp;is&nbsp;used&nbsp;for&nbsp;a&nbsp;node.<br>
 The&nbsp;pre_category&nbsp;must&nbsp;be&nbsp;added&nbsp;as&nbsp;a&nbsp;category&nbsp;before&nbsp;it&nbsp;is&nbsp;used&nbsp;as&nbsp;a&nbsp;pre_category.</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-addNode"><strong>addNode</strong></a>(self, node_name, pre_node_id<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;new&nbsp;node<br>
+<dl><dt><a name="CategorizerData-addNode"><strong>addNode</strong></a>(self, node_name, pre_node_id<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;new&nbsp;node<br>
 If&nbsp;adding&nbsp;a&nbsp;simple&nbsp;node&nbsp;with&nbsp;no&nbsp;category&nbsp;or&nbsp;pre_node&nbsp;connection,&nbsp;just&nbsp;include&nbsp;the&nbsp;name.<br>
 If&nbsp;the&nbsp;node&nbsp;is&nbsp;to&nbsp;be&nbsp;categorized,&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;preNode,&nbsp;category,&nbsp;preCategory&nbsp;must&nbsp;already&nbsp;exist.<br>
 This&nbsp;method&nbsp;is&nbsp;called&nbsp;after&nbsp;user&nbsp;has&nbsp;selected&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;pre_node,&nbsp;category,&nbsp;pre_category,&nbsp;e.g.&nbsp;from&nbsp;the&nbsp;GUI.&nbsp;&nbsp;Based&nbsp;on&nbsp;which&nbsp;particular&nbsp;preNode,&nbsp;category,&nbsp;preCategory&nbsp;the&nbsp;user&nbsp;selected,&nbsp;we&nbsp;know&nbsp;the&nbsp;pre_node_id,&nbsp;cat_id,&nbsp;pre_cat_id.</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-addNodes"><strong>addNodes</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
+<dl><dt><a name="CategorizerData-addNodes"><strong>addNodes</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
 add&nbsp;the&nbsp;nodes&nbsp;to&nbsp;the&nbsp;table&nbsp;nodes,&nbsp;add&nbsp;information&nbsp;to&nbsp;preNodes,&nbsp;and&nbsp;if&nbsp;the&nbsp;category&nbsp;is&nbsp;new,&nbsp;add&nbsp;a&nbsp;new&nbsp;category<br>
 nodes:&nbsp;a&nbsp;list&nbsp;of&nbsp;nodes&nbsp;to&nbsp;be&nbsp;added&nbsp;to&nbsp;the&nbsp;nodes&nbsp;table&nbsp;and&nbsp;the&nbsp;preNodes&nbsp;table<br>
 category:&nbsp;the&nbsp;category&nbsp;for&nbsp;the&nbsp;preNodes&nbsp;table<br>
@@ -137,25 +137,25 @@ pre_node_name,&nbsp;pre_node_id:<br>
 &nbsp;&nbsp;'name',&nbsp;nodeId:&nbsp;both&nbsp;are&nbsp;specified,&nbsp;validate&nbsp;the&nbsp;name&nbsp;matches&nbsp;the&nbsp;nodeId<br>
 raises&nbsp;<a href="#AmbiguousNameException">AmbiguousNameException</a>&nbsp;if&nbsp;the&nbsp;category_name&nbsp;or&nbsp;pre_node_name&nbsp;is&nbsp;given&nbsp;without&nbsp;its&nbsp;corresponding&nbsp;id,&nbsp;and&nbsp;there&nbsp;are&nbsp;more&nbsp;than&nbsp;one&nbsp;id&nbsp;with&nbsp;the&nbsp;same&nbsp;name.</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-addNodesToCategory"><strong>addNodesToCategory</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
+<dl><dt><a name="CategorizerData-addNodesToCategory"><strong>addNodesToCategory</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
 do&nbsp;not&nbsp;create&nbsp;a&nbsp;new&nbsp;category,&nbsp;reuse&nbsp;an&nbsp;existing&nbsp;category,&nbsp;just&nbsp;extend&nbsp;it&nbsp;with&nbsp;new&nbsp;nodes<br>
 calls&nbsp;addNodes&nbsp;with&nbsp;category_id&nbsp;specified.</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-addNotes"><strong>addNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED&nbsp;YET<br>
+<dl><dt><a name="CategorizerData-addNotes"><strong>addNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED&nbsp;YET<br>
 add&nbsp;new&nbsp;notes&nbsp;to&nbsp;the&nbsp;database</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-dumpTable"><strong>dumpTable</strong></a>(self, table_name)</dt><dd><tt>returns&nbsp;all&nbsp;of&nbsp;the&nbsp;data&nbsp;in&nbsp;a&nbsp;table&nbsp;as&nbsp;a&nbsp;list&nbsp;of&nbsp;tuples</tt></dd></dl>
+<dl><dt><a name="CategorizerData-dumpTable"><strong>dumpTable</strong></a>(self, table_name)</dt><dd><tt>returns&nbsp;all&nbsp;of&nbsp;the&nbsp;data&nbsp;in&nbsp;a&nbsp;table&nbsp;as&nbsp;a&nbsp;list&nbsp;of&nbsp;tuples</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-editNode"><strong>editNode</strong></a>(self, node_id, name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;name,&nbsp;dx,&nbsp;dy</tt></dd></dl>
+<dl><dt><a name="CategorizerData-editNode"><strong>editNode</strong></a>(self, node_id, name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;name,&nbsp;dx,&nbsp;dy</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-editPreNode"><strong>editPreNode</strong></a>(self, node_id, pre_node_id_orig, pre_node_id_new<font color="#909090">=None</font>, category_id_orig<font color="#909090">=None</font>, category_id_new<font color="#909090">=None</font>, name_alias<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>edit&nbsp;one&nbsp;of&nbsp;the&nbsp;connections&nbsp;from&nbsp;the&nbsp;node&nbsp;to&nbsp;a&nbsp;pre_node<br>
+<dl><dt><a name="CategorizerData-editPreNode"><strong>editPreNode</strong></a>(self, node_id, pre_node_id_orig, pre_node_id_new<font color="#909090">=None</font>, category_id_orig<font color="#909090">=None</font>, category_id_new<font color="#909090">=None</font>, name_alias<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>edit&nbsp;one&nbsp;of&nbsp;the&nbsp;connections&nbsp;from&nbsp;the&nbsp;node&nbsp;to&nbsp;a&nbsp;pre_node<br>
 pre_node_id&nbsp;and&nbsp;category_id&nbsp;are&nbsp;primary&nbsp;keys,&nbsp;so&nbsp;to&nbsp;change&nbsp;them,&nbsp;it&nbsp;is&nbsp;necessary&nbsp;to&nbsp;provide&nbsp;the&nbsp;originals&nbsp;as&nbsp;well&nbsp;as&nbsp;the&nbsp;new&nbsp;ids.</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
+<dl><dt><a name="CategorizerData-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-getNodeIds"><strong>getNodeIds</strong></a>(self, name)</dt></dl>
+<dl><dt><a name="CategorizerData-getNodeIds"><strong>getNodeIds</strong></a>(self, name)</dt></dl>
 
-<dl><dt><a name="DatabaseInterface-getNodeInfo"><strong>getNodeInfo</strong></a>(self, node_name)</dt><dd><tt>returns&nbsp;all&nbsp;instances&nbsp;of&nbsp;node_name&nbsp;both&nbsp;for&nbsp;standard&nbsp;name&nbsp;and&nbsp;aliases.&nbsp;<br>
+<dl><dt><a name="CategorizerData-getNodeInfo"><strong>getNodeInfo</strong></a>(self, node_name)</dt><dd><tt>returns&nbsp;all&nbsp;instances&nbsp;of&nbsp;node_name&nbsp;both&nbsp;for&nbsp;standard&nbsp;name&nbsp;and&nbsp;aliases.&nbsp;<br>
 if&nbsp;node_name&nbsp;exists:<br>
 &nbsp;&nbsp;return&nbsp;(<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdA,&nbsp;nodeName,&nbsp;categoryId1,&nbsp;categoryName1,&nbsp;alias1,&nbsp;preNodeId1,&nbsp;preNodeName1),&nbsp;<br>
@@ -166,9 +166,9 @@ if&nbsp;node_name&nbsp;exists:<br>
 else:<br>
 &nbsp;&nbsp;return&nbsp;()</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
+<dl><dt><a name="CategorizerData-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
-<dl><dt><a name="DatabaseInterface-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
+<dl><dt><a name="CategorizerData-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
 not&nbsp;implemented</tt></dd></dl>
 
 </td></tr></table></td></tr></table>
