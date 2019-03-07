@@ -11,6 +11,7 @@
 ><td align=right valign=bottom
 ><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/stuart/code/pensieve/data/sqlite3_db.py">/home/stuart/code/pensieve/data/sqlite3_db.py</a></font></td></tr></table>
     <p><tt>history:<br>
+2/3&nbsp;-&nbsp;<br>
 12/19&nbsp;-&nbsp;eliminate&nbsp;tableInits?<br>
 12/19/18&nbsp;-&nbsp;need&nbsp;to&nbsp;change&nbsp;categoryTable:preNodeId&nbsp;to&nbsp;preCatId</tt></p>
 <p>
@@ -101,74 +102,52 @@ Data and other attributes inherited from <a href="exceptions.html#BaseException"
 <font color="#000000" face="helvetica, arial"><a name="CategorizerData">class <strong>CategorizerData</strong></a></font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt>Concepts:<br>
-&nbsp;&nbsp;-&nbsp;category:<br>
-&nbsp;&nbsp;-&nbsp;node:<br>
-&nbsp;&nbsp;-&nbsp;path:<br>
-&nbsp;&nbsp;-&nbsp;alias:<br>
-&nbsp;&nbsp;-&nbsp;pathRev:<br>
-Reads&nbsp;and&nbsp;writes&nbsp;data&nbsp;to&nbsp;a&nbsp;set&nbsp;of&nbsp;tables&nbsp;which&nbsp;keep&nbsp;track&nbsp;of:<br>
-&nbsp;&nbsp;-&nbsp;categories&nbsp;of&nbsp;notes<br>
-&nbsp;&nbsp;-&nbsp;individual&nbsp;nodes&nbsp;within&nbsp;the&nbsp;categories<br>
-&nbsp;&nbsp;-&nbsp;parent&nbsp;child&nbsp;relationships&nbsp;between&nbsp;both&nbsp;categories&nbsp;and&nbsp;individual&nbsp;nodes.<br>
-The&nbsp;database&nbsp;maintains&nbsp;all&nbsp;historical&nbsp;versions&nbsp;so&nbsp;notes&nbsp;referring&nbsp;to&nbsp;an&nbsp;old&nbsp;path&nbsp;do&nbsp;not&nbsp;have&nbsp;to&nbsp;be&nbsp;updated<br>&nbsp;</tt></td></tr>
+<td colspan=2><tt>Reads&nbsp;and&nbsp;writes&nbsp;data&nbsp;to&nbsp;a&nbsp;set&nbsp;of&nbsp;tables&nbsp;which&nbsp;keep&nbsp;track&nbsp;of:<br>
+&nbsp;&nbsp;notes&nbsp;and&nbsp;their&nbsp;categories<br>
+&nbsp;&nbsp;relationships&nbsp;between&nbsp;the&nbsp;categories&nbsp;in&nbsp;which&nbsp;notes&nbsp;are&nbsp;taken.<br>
+&nbsp;&nbsp;historical&nbsp;versions&nbsp;of&nbsp;both&nbsp;notes&nbsp;and&nbsp;categories<br>
+&nbsp;<br>
+Concepts:<br>
+&nbsp;&nbsp;category&nbsp;(cat):&nbsp;A&nbsp;grouping&nbsp;in&nbsp;which&nbsp;notes&nbsp;can&nbsp;be&nbsp;placed&nbsp;with&nbsp;a&nbsp;semantic&nbsp;meaning&nbsp;which&nbsp;all&nbsp;the&nbsp;notes&nbsp;at&nbsp;least&nbsp;partially&nbsp;match.<br>
+&nbsp;&nbsp;catVariant:&nbsp;A&nbsp;variant&nbsp;of&nbsp;a&nbsp;category.&nbsp;&nbsp;The&nbsp;variation&nbsp;can&nbsp;be&nbsp;semantic&nbsp;of&nbsp;syntactic.&nbsp;&nbsp;The&nbsp;variant&nbsp;has&nbsp;a&nbsp;different&nbsp;name&nbsp;than&nbsp;the&nbsp;category,&nbsp;though&nbsp;usually&nbsp;a&nbsp;similar&nbsp;name.&nbsp;&nbsp;e.g.&nbsp;Given&nbsp;category&nbsp;'Horse',&nbsp;a&nbsp;category&nbsp;variant&nbsp;could&nbsp;be&nbsp;'equus'.<br>
+&nbsp;&nbsp;relation&nbsp;(rel):&nbsp;A&nbsp;relationship&nbsp;between&nbsp;categories.&nbsp;&nbsp;e.g.&nbsp;'is-a',&nbsp;'has-a'<br>
+&nbsp;&nbsp;relVariant:&nbsp;A&nbsp;variant&nbsp;of&nbsp;a&nbsp;relation.&nbsp;&nbsp;e.g.&nbsp;'are',&nbsp;'sub-component'<br>
+&nbsp;&nbsp;catNode:&nbsp;A&nbsp;catNode&nbsp;'is-a'&nbsp;catVariant.&nbsp;&nbsp;A&nbsp;catNode&nbsp;is&nbsp;the&nbsp;category&nbsp;for&nbsp;zero&nbsp;or&nbsp;more&nbsp;notes.&nbsp;&nbsp;Two&nbsp;catNodes&nbsp;can&nbsp;have&nbsp;identical&nbsp;categories&nbsp;and&nbsp;be&nbsp;different&nbsp;in&nbsp;their&nbsp;connections.<br>
+&nbsp;&nbsp;catConnection:&nbsp;A&nbsp;connection&nbsp;'is-a'&nbsp;relationVariant.&nbsp;&nbsp;It&nbsp;connects&nbsp;two&nbsp;catNodes.<br>
+&nbsp;&nbsp;pathRev:&nbsp;A&nbsp;pathRev&nbsp;identifies&nbsp;a&nbsp;set&nbsp;of&nbsp;catNodes&nbsp;and&nbsp;catConnections&nbsp;(path)&nbsp;at&nbsp;a&nbsp;specific&nbsp;time.&nbsp;&nbsp;If&nbsp;changes&nbsp;have&nbsp;been&nbsp;made&nbsp;to&nbsp;the&nbsp;catNodes&nbsp;or&nbsp;catConnections,&nbsp;when&nbsp;a&nbsp;note&nbsp;is&nbsp;taken,&nbsp;the&nbsp;pathRev&nbsp;will&nbsp;be&nbsp;'closed'.&nbsp;&nbsp;Next&nbsp;time&nbsp;a&nbsp;change&nbsp;is&nbsp;made&nbsp;to&nbsp;the&nbsp;path,&nbsp;a&nbsp;new&nbsp;pathRev&nbsp;will&nbsp;be&nbsp;used.&nbsp;&nbsp;This&nbsp;enables&nbsp;old&nbsp;notes&nbsp;to&nbsp;use&nbsp;old&nbsp;paths,&nbsp;eliminating&nbsp;the&nbsp;need&nbsp;to&nbsp;update&nbsp;all&nbsp;notes&nbsp;when&nbsp;a&nbsp;change&nbsp;is&nbsp;made&nbsp;to&nbsp;the&nbsp;path.<br>
+&nbsp;<br>
+schema:<br>
+&nbsp;&nbsp;categories&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catId,&nbsp;pathRev)<br>
+&nbsp;&nbsp;catVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catId&nbsp;INTEGER,&nbsp;catVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catVarId,&nbsp;pathRev)<br>
+&nbsp;&nbsp;catNodes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catVarId&nbsp;INTEGER,&nbsp;dx&nbsp;INTEGER,&nbsp;dy&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeID,&nbsp;pathRev)<br>
+&nbsp;&nbsp;relations&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;prefix&nbsp;BLOB,&nbsp;relName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relId,&nbsp;pathRev)<br>
+&nbsp;&nbsp;relVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relId&nbsp;INTEGER,&nbsp;relVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relVarId,&nbsp;pathRev)<br>
+&nbsp;&nbsp;catConnections&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relVarId&nbsp;INTEGER,&nbsp;superCatNodeId&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeId,&nbsp;pathRev,&nbsp;relVarId,&nbsp;superCatNodeId)<br>
+&nbsp;&nbsp;pathRevs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;pathRev&nbsp;INTEGER,&nbsp;startDateTime&nbsp;BLOB,&nbsp;openForChange&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(pathRev)<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
 <dl><dt><a name="CategorizerData-__init__"><strong>__init__</strong></a>(self, database_path_and_file_name, lock, in_memory<font color="#909090">=False</font>, create_new_database<font color="#909090">=False</font>)</dt></dl>
 
-<dl><dt><a name="CategorizerData-addCategory"><strong>addCategory</strong></a>(self, category_name, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;category.<br>
-If&nbsp;the&nbsp;category&nbsp;has&nbsp;a&nbsp;pre_category,&nbsp;e.g.&nbsp;category&nbsp;Species&nbsp;has&nbsp;pre_category&nbsp;Genus,&nbsp;the&nbsp;user&nbsp;selects&nbsp;the&nbsp;pre_category&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;and&nbsp;the&nbsp;GUI&nbsp;provides&nbsp;the&nbsp;pre_cat_id&nbsp;based&nbsp;on&nbsp;the&nbsp;selection.<br>
-The&nbsp;category&nbsp;must&nbsp;be&nbsp;added&nbsp;before&nbsp;it&nbsp;is&nbsp;used&nbsp;for&nbsp;a&nbsp;node.<br>
-The&nbsp;pre_category&nbsp;must&nbsp;be&nbsp;added&nbsp;as&nbsp;a&nbsp;category&nbsp;before&nbsp;it&nbsp;is&nbsp;used&nbsp;as&nbsp;a&nbsp;pre_category.</tt></dd></dl>
-
-<dl><dt><a name="CategorizerData-addNode"><strong>addNode</strong></a>(self, node_name, pre_node_id<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_cat_id<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;new&nbsp;node<br>
-If&nbsp;adding&nbsp;a&nbsp;simple&nbsp;node&nbsp;with&nbsp;no&nbsp;category&nbsp;or&nbsp;pre_node&nbsp;connection,&nbsp;just&nbsp;include&nbsp;the&nbsp;name.<br>
-If&nbsp;the&nbsp;node&nbsp;is&nbsp;to&nbsp;be&nbsp;categorized,&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;preNode,&nbsp;category,&nbsp;preCategory&nbsp;must&nbsp;already&nbsp;exist.<br>
-This&nbsp;method&nbsp;is&nbsp;called&nbsp;after&nbsp;user&nbsp;has&nbsp;selected&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;pre_node,&nbsp;category,&nbsp;pre_category,&nbsp;e.g.&nbsp;from&nbsp;the&nbsp;GUI.&nbsp;&nbsp;Based&nbsp;on&nbsp;which&nbsp;particular&nbsp;preNode,&nbsp;category,&nbsp;preCategory&nbsp;the&nbsp;user&nbsp;selected,&nbsp;we&nbsp;know&nbsp;the&nbsp;pre_node_id,&nbsp;cat_id,&nbsp;pre_cat_id.</tt></dd></dl>
-
-<dl><dt><a name="CategorizerData-addNodes"><strong>addNodes</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
-add&nbsp;the&nbsp;nodes&nbsp;to&nbsp;the&nbsp;table&nbsp;nodes,&nbsp;add&nbsp;information&nbsp;to&nbsp;preNodes,&nbsp;and&nbsp;if&nbsp;the&nbsp;category&nbsp;is&nbsp;new,&nbsp;add&nbsp;a&nbsp;new&nbsp;category<br>
-nodes:&nbsp;a&nbsp;list&nbsp;of&nbsp;nodes&nbsp;to&nbsp;be&nbsp;added&nbsp;to&nbsp;the&nbsp;nodes&nbsp;table&nbsp;and&nbsp;the&nbsp;preNodes&nbsp;table<br>
-category:&nbsp;the&nbsp;category&nbsp;for&nbsp;the&nbsp;preNodes&nbsp;table<br>
-pre_node_name,&nbsp;pre_node_id:<br>
-&nbsp;&nbsp;None,&nbsp;None:&nbsp;No&nbsp;preNode&nbsp;is&nbsp;specified,&nbsp;which&nbsp;is&nbsp;OK,&nbsp;just&nbsp;leave&nbsp;preNode&nbsp;data&nbsp;blank<br>
-&nbsp;&nbsp;'name',&nbsp;None:&nbsp;a&nbsp;name&nbsp;is&nbsp;specified,&nbsp;but&nbsp;no&nbsp;nodeId,&nbsp;so&nbsp;look&nbsp;up&nbsp;the&nbsp;nodeId&nbsp;corresponding&nbsp;to&nbsp;the&nbsp;name<br>
-&nbsp;&nbsp;None,&nbsp;nodeId:&nbsp;the&nbsp;nodeId&nbsp;is&nbsp;specified,&nbsp;so&nbsp;use&nbsp;that&nbsp;directly<br>
-&nbsp;&nbsp;'name',&nbsp;nodeId:&nbsp;both&nbsp;are&nbsp;specified,&nbsp;validate&nbsp;the&nbsp;name&nbsp;matches&nbsp;the&nbsp;nodeId<br>
-raises&nbsp;<a href="#AmbiguousNameException">AmbiguousNameException</a>&nbsp;if&nbsp;the&nbsp;category_name&nbsp;or&nbsp;pre_node_name&nbsp;is&nbsp;given&nbsp;without&nbsp;its&nbsp;corresponding&nbsp;id,&nbsp;and&nbsp;there&nbsp;are&nbsp;more&nbsp;than&nbsp;one&nbsp;id&nbsp;with&nbsp;the&nbsp;same&nbsp;name.</tt></dd></dl>
-
-<dl><dt><a name="CategorizerData-addNodesToCategory"><strong>addNodesToCategory</strong></a>(self, nodes, category_name<font color="#909090">=None</font>, category_id<font color="#909090">=None</font>, pre_node_name<font color="#909090">=None</font>, pre_node_id<font color="#909090">=None</font>)</dt><dd><tt>OBSOLETE<br>
-do&nbsp;not&nbsp;create&nbsp;a&nbsp;new&nbsp;category,&nbsp;reuse&nbsp;an&nbsp;existing&nbsp;category,&nbsp;just&nbsp;extend&nbsp;it&nbsp;with&nbsp;new&nbsp;nodes<br>
-calls&nbsp;addNodes&nbsp;with&nbsp;category_id&nbsp;specified.</tt></dd></dl>
+<dl><dt><a name="CategorizerData-addCatNode"><strong>addCatNode</strong></a>(self, cat_var_id<font color="#909090">=None</font>, cat_var_name<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;new&nbsp;catNode&nbsp;with&nbsp;no&nbsp;connections.<br>
+Must&nbsp;have&nbsp;either&nbsp;cat_var_id&nbsp;or&nbsp;cat_var_name.<br>
+If&nbsp;cat_var_id&nbsp;is&nbsp;provided,&nbsp;will&nbsp;add&nbsp;a&nbsp;catNode&nbsp;with&nbsp;that&nbsp;catVarId.<br>
+If&nbsp;cat_var_name&nbsp;is&nbsp;provided,&nbsp;add&nbsp;a&nbsp;new&nbsp;category,&nbsp;catVariant,&nbsp;then&nbsp;add&nbsp;a&nbsp;catNode&nbsp;with&nbsp;the&nbsp;new&nbsp;catVarId.</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-addNotes"><strong>addNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED&nbsp;YET<br>
 add&nbsp;new&nbsp;notes&nbsp;to&nbsp;the&nbsp;database</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-dumpTable"><strong>dumpTable</strong></a>(self, table_name)</dt><dd><tt>returns&nbsp;all&nbsp;of&nbsp;the&nbsp;data&nbsp;in&nbsp;a&nbsp;table&nbsp;as&nbsp;a&nbsp;list&nbsp;of&nbsp;tuples</tt></dd></dl>
 
-<dl><dt><a name="CategorizerData-editNode"><strong>editNode</strong></a>(self, node_id, name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;name,&nbsp;dx,&nbsp;dy</tt></dd></dl>
-
-<dl><dt><a name="CategorizerData-editPreNode"><strong>editPreNode</strong></a>(self, node_id, pre_node_id_orig, pre_node_id_new<font color="#909090">=None</font>, category_id_orig<font color="#909090">=None</font>, category_id_new<font color="#909090">=None</font>, name_alias<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>edit&nbsp;one&nbsp;of&nbsp;the&nbsp;connections&nbsp;from&nbsp;the&nbsp;node&nbsp;to&nbsp;a&nbsp;pre_node<br>
-pre_node_id&nbsp;and&nbsp;category_id&nbsp;are&nbsp;primary&nbsp;keys,&nbsp;so&nbsp;to&nbsp;change&nbsp;them,&nbsp;it&nbsp;is&nbsp;necessary&nbsp;to&nbsp;provide&nbsp;the&nbsp;originals&nbsp;as&nbsp;well&nbsp;as&nbsp;the&nbsp;new&nbsp;ids.</tt></dd></dl>
+<dl><dt><a name="CategorizerData-editCatNode"><strong>editCatNode</strong></a>(self, node_id, name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;name,&nbsp;dx,&nbsp;dy</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
-<dl><dt><a name="CategorizerData-getNodeIds"><strong>getNodeIds</strong></a>(self, name)</dt></dl>
-
-<dl><dt><a name="CategorizerData-getNodeInfo"><strong>getNodeInfo</strong></a>(self, node_name)</dt><dd><tt>returns&nbsp;all&nbsp;instances&nbsp;of&nbsp;node_name&nbsp;both&nbsp;for&nbsp;standard&nbsp;name&nbsp;and&nbsp;aliases.&nbsp;<br>
-if&nbsp;node_name&nbsp;exists:<br>
-&nbsp;&nbsp;return&nbsp;(<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdA,&nbsp;nodeName,&nbsp;categoryId1,&nbsp;categoryName1,&nbsp;alias1,&nbsp;preNodeId1,&nbsp;preNodeName1),&nbsp;<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdA,&nbsp;nodeName,&nbsp;categoryId2,&nbsp;categoryName2,&nbsp;alias2,&nbsp;preNodeId2,&nbsp;preNodeName2),<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(nodeIdB,&nbsp;nodeName,&nbsp;categoryId3,&nbsp;categoryName3,&nbsp;alias3,&nbsp;preNodeId3,&nbsp;preNodeName3),<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...&nbsp;,<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
-else:<br>
-&nbsp;&nbsp;return&nbsp;()</tt></dd></dl>
-
 <dl><dt><a name="CategorizerData-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
-<dl><dt><a name="CategorizerData-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
+<dl><dt><a name="CategorizerData-getPathRev"><strong>getPathRev</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="CategorizerData-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED<br>
+modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
 not&nbsp;implemented</tt></dd></dl>
 
 </td></tr></table></td></tr></table>
