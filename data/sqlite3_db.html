@@ -120,7 +120,7 @@ schema:<br>
 &nbsp;&nbsp;categories&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catId,&nbsp;pathRev)<br>
 &nbsp;&nbsp;catVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catId&nbsp;INTEGER,&nbsp;catVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catVarId,&nbsp;pathRev)<br>
 &nbsp;&nbsp;catNodes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catVarId&nbsp;INTEGER,&nbsp;dx&nbsp;INTEGER,&nbsp;dy&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeID,&nbsp;pathRev)<br>
-&nbsp;&nbsp;relations&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;prefix&nbsp;BLOB,&nbsp;relName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relId,&nbsp;pathRev)<br>
+&nbsp;&nbsp;relations&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relPrefix&nbsp;BLOB,&nbsp;relName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relId,&nbsp;pathRev)<br>
 &nbsp;&nbsp;relVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relId&nbsp;INTEGER,&nbsp;relVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relVarId,&nbsp;pathRev)<br>
 &nbsp;&nbsp;catConnections&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relVarId&nbsp;INTEGER,&nbsp;superCatNodeId&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeId,&nbsp;pathRev,&nbsp;relVarId,&nbsp;superCatNodeId)<br>
 &nbsp;&nbsp;pathRevs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;pathRev&nbsp;INTEGER,&nbsp;startDateTime&nbsp;BLOB,&nbsp;openForChange&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(pathRev)<br>&nbsp;</tt></td></tr>
@@ -143,8 +143,6 @@ add&nbsp;new&nbsp;notes&nbsp;to&nbsp;the&nbsp;database</tt></dd></dl>
 <dl><dt><a name="CategorizerData-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
-
-<dl><dt><a name="CategorizerData-getPathRev"><strong>getPathRev</strong></a>(self)</dt></dl>
 
 <dl><dt><a name="CategorizerData-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED<br>
 modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
