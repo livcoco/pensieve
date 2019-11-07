@@ -36,6 +36,10 @@ class CategorizerData:
       catConnections : catNodeId INTEGER, pathRev INTEGER, relVarId INTEGER, superCatNodeId INTEGER, validForLatest INTEGER, PRIMARY KEY (catNodeId, pathRev, relVarId, superCatNodeId)
       pathRevs       : pathRev INTEGER, startDateTime BLOB, openForChange INTEGER, PRIMARY KEY (pathRev)
 
+    for a more complete picture:
+    ../../../IHMC\ CmapTools/CmapTools &
+    open pensieve_database_schema
+
     '''
     def __init__(self, database_path_and_file_name, lock, in_memory = False, create_new_database = False):
         show = False
@@ -247,9 +251,6 @@ class CategorizerData:
             self.dbCursor.execute(self.sqlAdds['pathRevs'], (pathRev, int(time.time()), 1))
         return pathRev
     
-#    def addPathRev(self):
-#        self.dbCursor.execute(self.sqlAdds['categories'], (categoryId, preNodeId, category_name))
-
     def addCatNode(self, cat_var_id = None, cat_var_name = None):
         '''
         Add a single new catNode with no connections.
@@ -287,6 +288,7 @@ class CategorizerData:
                 rel_var_id = self._getRelVarId(rel_var_name)
             
         self.dbCursor.execute(self.sqlAdds['catConnections'], (cat_node_id, pathRev, rel_var_id, super_cat_node_id, 1))
+        self.db.commit()
         
     def _addCatNode(self, cat_var_id):
         show = False
@@ -367,17 +369,14 @@ class CategorizerData:
         catId += 1
         if show: print('  catId', catId, ', pathRev', pathRev)
 
+        # add the category
         self.dbCursor.execute(self.sqlAdds['categories'], (catId, pathRev, cat_name, 1))
         if show:
             print('    added new category:', (catId, pathRev, cat_name, 1))
 
         # add the default catVariant for the category
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.catVarsColumnNames[0] + ') FROM catVariants')
-        (catVarId,) = cursor.fetchone()
-        catVarId += 1        
-        self.dbCursor.execute(self.sqlAdds['catVariants'], (catVarId, pathRev, catId, None, 1))
-        
-        self.db.commit()
+        catVarId = self._addCatVariant(catId, None) # does self.db.commit()
+
         return catVarId
     
     def _addCatVariant(self, cat_id, cat_var_name):
@@ -388,16 +387,15 @@ class CategorizerData:
         The category and at least the default category variant must be added before it is used for a node.
         '''
         show = False
-        if show: print('in _addCatVariant() with cat_id', cat_id, ', cat_var_name', cat_var_name)        
+        if show: print('in _addCatVariant() with cat_id', cat_id, ', cat_var_name', cat_var_name)
 
         pathRev = self._getPathRev()
 
         # add the catVariant for the category
         cursor = self.dbCursor.execute('SELECT MAX(' + self.catVarsColumnNames[0] + ') FROM catVariants')
         (catVarId,) = cursor.fetchone()
-        catVarId += 1        
+        catVarId += 1
         self.dbCursor.execute(self.sqlAdds['catVariants'], (catVarId, pathRev, cat_id, cat_var_name, 1))
-        
         self.db.commit()
         return catVarId
 
@@ -416,13 +414,9 @@ class CategorizerData:
         if show:
             print('    added new relation:', (relId, pathRev, rel_prefix, rel_name, direction, 1))
 
-        # add the default catVariant for the category
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.relVarsColumnNames[0] + ') FROM relVariants')
-        (relVarId,) = cursor.fetchone()
-        relVarId += 1        
-        self.dbCursor.execute(self.sqlAdds['relVariants'], (relVarId, pathRev, relId, None, None, None, 1))
-        
-        self.db.commit()
+        # add the default relVariant for the category
+        relVarId = self._addRelVariant(relId)
+
         return relVarId
         
     def _addRelVariant(self, rel_id, rel_var_prefix = None, rel_var_name = None, var_direction = None):
@@ -446,11 +440,11 @@ class CategorizerData:
 
     def editCatNode(self, cat_node_id, cat_var_id = None, dx = None, dy = None):
         '''
-        Given a cat_node_id selected from the GUI, change the category variant
+        Given a cat_node_id selected from the GUI, change one of more of; category variant id, dx, dy
         the category variant must be created first, then the catVarId passed to this method.
 
         if the pathRev of the catNode is current:
-          simply change the catVarId to the new cat_var_id
+          simply change the current catNode
 
         if the pathRev of the catNode is not current:
           create a new catNode with the new pathRev and catVarId, cloning the rest of the data.
@@ -458,50 +452,43 @@ class CategorizerData:
           mark the old catNode validForLatest = False
           mark the old catConnections' validForLatest = False
         '''
-        show = True
+        show = False
         if show: print('in editCatNode() with cat_node_id', cat_node_id, ', cat_var_id', cat_var_id, ', dx', dx, ', dy', dy)
+        if cat_var_id == None and dx == None and dy == None:
+            return
+
         # get the latest pathRev
         pathRev = self._getPathRev()
 
-        # get the path rev of the latest version of this catNode                                          valid for latest
-        sqlWhere = ' WHERE ' + self.catNodesColumnNames[0] + ' == ' + str(cat_node_id) + ' AND ' + self.catNodesColumnNames[5] + ' == 1'
-        #                           pathRev
-        sql = 'SELECT ' + self.catNodesColumnNames[1] + ' FROM catNodes ' + sqlWhere
-        cursor = self.dbCursor.execute(sql)
-        (oldPathRev,) = cursor.fetchone()
+        # get the path rev of the latest version of this catNode and the corresponding sql WHERE statement
+        (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('catNodes', cat_node_id, self.catNodesColumnNames) 
 
-        if oldPathRev == pathRev:
-            # The pathRevs are the same, so we can just change what we need to change
-            if show: print('    oldPathRev == pathRev, updating data:')
+        if rowPathRev == pathRev:
+            # The pathRevs are the same, so we can just change the existing tuple with what we need to change
+            if show: print('    rowPathRev == pathRev, updating data:')
+            colValPairs = []
             if cat_var_id != None:
-                columnName, value = self.catNodesColumnNames[2], cat_var_id
-                sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
-                if show: print('      updating cat_var_id: sql = \"', sql, '\"')
-                self.dbCursor.execute(sql)
+                colValPairs.append( (self.catNodesColumnNames[2], cat_var_id) )
             if dx != None:
-                columnName, value = self.catNodesColumnNames[3], dx
-                sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
-                if show: print('      updating dx: sql = \"', sql, '\"')
-                self.dbCursor.execute(sql)
+                colValPairs.append( (self.catNodesColumnNames[3], dx) )
             if dy != None:
-                columnName, value = self.catNodesColumnNames[4], dy
-                sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
-                if show: print('      updating dy: sql = \"', sql, '\"')
-                self.dbCursor.execute(sql)
+                colValPairs.append( (self.catNodesColumnNames[4], dy) )
+            self._editRow('catNodes', colValPairs, sqlWhere)
         else:
-            if show: print('    oldPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
+            # The pathRevs are not the same, so we need to make a new tuple in the database
+            if show: print('    rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             # get all the existing values from the current row
             (catNodeIdName, pathRevName, catVarIdName, dxName, dyName) = self.catNodesColumnNames[:5]
             sql = 'SELECT ({cni}, {pr}, {cvi}, {dx}, {dy} FROM catNodes '.format(cni=catNodeIdName, pr=pathRevName, cvi=catVarIdName, dx=dxName, dy=dyName) + sqlWhere
             cursor = self.dbCursor.execute(sql)
-            (catNodeId, oldPathRev, oldCatVarId, oldDx, oldDy) = cursor.fetchone()
-            
+            (catNodeId, rowPathRev, oldCatVarId, oldDx, oldDy) = cursor.fetchone()
+
             # set validForLatest of the old one to 0
             columnName, value = self.catNodesColumnNames[5], 0
             sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
             if show: print('      updating validForLatest: sql = \"', sql, '\"')
             self.dbCursor.execute(sql)
-            
+
             # create a new version of the catNode which is a new row in the table.  We change one of the primary keys: pathRev
             if cat_var_id == None:
                 catVarId = oldCatVarId
@@ -511,14 +498,40 @@ class CategorizerData:
                 dx = oldDx
             if dy == None:
                 dy = oldDy
-                
             self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, catVarId, dx, dy, 1))
-            
+        self.db.commit()
+
+    def _getRowPathRevAndSQLWhere(self, table_name, row_id, column_names):
+        '''
+        the 1st column of all tables must be an id
+        the 2nd column of all tables must be pathRev
+        the last column of all tables must be validForLatest
+        '''
+        show = False
+        if show: print('in _getRowPathRevAndSQLWhere() with table_name', table_name, ', row_id', row_id, ', column_names', column_names)
+        sqlWhere = ' WHERE ' + column_names[0] + ' == ' + str(row_id) + ' AND ' + column_names[-1] + ' == 1'
+        sql = 'SELECT ' + column_names[1] + ' FROM ' + table_name + sqlWhere
+        cursor = self.dbCursor.execute(sql)
+        (rowPathRev,) = cursor.fetchone()
+        if show: print('  returning (rowPathRev', rowPathRev, ', sqlWhere', sqlWhere, ')')
+        return (rowPathRev, sqlWhere)
+    
+    def _editRow(self, table_name, column_value_pairs, sql_where):
+        show = False
+        if show: print('in _editRow() with table_name', table_name, ', column_value_pairs', column_value_pairs, ', sql_where', sql_where)
+        sql = 'UPDATE catNodes SET'
+        for (columnName, value) in column_value_pairs:
+            sql += ' {col} = {val},'.format(col = columnName, val = value)
+        sql = sql[:-1] + sql_where #get rid of the last comma and append the 'WHERE' statement
+        if show: print('  updating row with sql = \"', sql, '\"')
+        self.dbCursor.execute(sql)
+
     def moveCatNode(self, cat_node_id, dx = None, dy = None):
         '''
         provide a new location for the category node
         '''
         pass
+
     def dumpTable(self, table_name):
         '''
         returns all of the data in a table as a list of tuples

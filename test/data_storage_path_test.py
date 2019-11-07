@@ -12,7 +12,7 @@ from context import CategorizerData
 import shutil
 
 class DataStoragePathTest(unittest.TestCase):
-    runAll = False
+    runAll = True
     runTestCounts = [0, 1, 2, 3, 4]
     runTestCounts = [5,6]
     runTestCounts = [1,2,3,4,5,6,7]
@@ -292,7 +292,7 @@ class DataStoragePathTest(unittest.TestCase):
         necessaryPreTests = set([1,2,3,4,5,6,7])
         if necessaryPreTests != set(self.runTestCounts).intersection(necessaryPreTests):
             print('ERROR - to run test_08, must run tests', necessaryPreTests)
-        show = True
+        show = False
         print('  test_08_editCatNode')
         editCatNodes = (
             #catNodeId, newCatVarId, newDx, newDy
