@@ -13,10 +13,13 @@ import shutil
 
 class DataStoragePathTest(unittest.TestCase):
     runAll = True
-    runTestCounts = [0, 1, 2, 3, 4]
-    runTestCounts = [5,6]
-    runTestCounts = [1,2,3,4,5,6,7]
-    runTestCounts = [1,2,3,4,5,6,7,8]
+    runTestCounts = list(range(9))
+    #runTestCounts = [0]
+    #runTestCounts = [0, 1, 2]
+    #runTestCounts = [0, 1, 2, 3, 4]
+    #runTestCounts = [5,6]
+    #runTestCounts = [1,2,3,4,5,6,7]
+    #runTestCounts = [1,2,3,4,5,6,7,8]
     
     def test_00_instantiate(self):
         if not self.runAll:
@@ -126,14 +129,14 @@ class DataStoragePathTest(unittest.TestCase):
             (None, 'sheep'),
         )
         expCatNodes = (
-            #catNodeId, pathRev, catVarId, dx, dy, validForLatest
-            (0, 0, 0,  None, None, 0),
-            (1, 1, 1,  None, None, 1),
-            (2, 1, 2,  None, None, 1),
-            (3, 1, 5,  None, None, 1),
-            (4, 1, 6,  None, None, 1),
-            (5, 1, 8,  None, None, 1),
-            (6, 1, 9,  None, None, 1),
+            #catNodeId, pathRev, catVarId, dx, dy, nodeStyleId, validForLatest
+            (0, 0, 0,  None, None, 0, 0),
+            (1, 1, 1,  None, None, 0, 1),
+            (2, 1, 2,  None, None, 0, 1),
+            (3, 1, 5,  None, None, 0, 1),
+            (4, 1, 6,  None, None, 0, 1),
+            (5, 1, 8,  None, None, 0, 1),
+            (6, 1, 9,  None, None, 0, 1),
         )
         expCats = (
             #catId, pathRev, catName, validForLatest
@@ -163,9 +166,10 @@ class DataStoragePathTest(unittest.TestCase):
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
         for i in range(len(addCatNodes)):
-            catNodeId = addCatNodes[i][0]
+            catVarId = addCatNodes[i][0]
             catVarName = addCatNodes[i][1]
-            db.addCatNode(catNodeId, catVarName)
+            db.addCatNode(catVarId, catVarName)
+            
         actCatNodes = db.dumpTable('catNodes')
         self.compareTuples('catNodes', expCatNodes, actCatNodes, show)
         actCats = db.dumpTable('categories')
@@ -264,13 +268,13 @@ class DataStoragePathTest(unittest.TestCase):
             (4, 3, None, 'from'), #5 make a connection based on a new relation Name
             )
         expCatConns = (
-            #catNodeId, pathRev, relVarId, superCatNodeId, validForLatest
-            (0, 0, 0, None, 0), #default, always there. created during database init
-            (4, 1, 3, 3, 1), #1
-            (4, 1, 0, 3, 1), #2
-            (4, 1, 5, 3, 1), #3
-            (4, 1, 1, 3, 1), #4
-            (4, 1, 8, 3, 1), #5
+            #catNodeId, pathRev, relVarId, superCatNodeId, connStyleId validForLatest
+            (0, 0, 0, None, 0, 0), #default, always there. created during database init
+            (4, 1, 3, 3, 0, 1), #1
+            (4, 1, 0, 3, 0, 1), #2
+            (4, 1, 5, 3, 0, 1), #3
+            (4, 1, 1, 3, 0, 1), #4
+            (4, 1, 8, 3, 0, 1), #5
         )
         for (catNodeId, superCatNodeId, relVarId, relVarName) in addConns:
             #                from       to              use one of these or neither
@@ -296,211 +300,115 @@ class DataStoragePathTest(unittest.TestCase):
         print('  test_08_editCatNode')
         editCatNodes = (
             #catNodeId, newCatVarId, newDx, newDy
-            (1, 2, None, None), #change from 1: 'Farm' to 2: 'Horse'
-            (2, 5, None, None), #change from 2: 'Horse' to 5: 'Horsey'
-            (3, 5, 22, None), # change dx to 22
-            (4, 6, None, 37), # change dy to 37
-            (5, 6, 11, 15), # change catVarId 6, dx to 11, dy 15
+            (1, 2, None, None, None), #change from 1: 'Farm' to 2: 'Horse'
+            (2, 5, None, None, None), #change from 2: 'Horse' to 5: 'Horsey'
+            (3, 5, None, 22, None), # change dx to 22
+            (4, 6, None, None, 37), # change dy to 37
+            (5, 6, None, 11, 15), # change catVarId 6, dx to 11, dy 15
+            (6, None, 'Bird', 9, 7), # change catVarId 6, dx to 11, dy 15
         )
         expCatNodes = (
             #catNodeId, pathRev, catVarId, dx, dy, validForLatest
-            (0, 0, 0,  None, None, 0),
-            (1, 1, 2,  None, None, 1), # catVarId to '2'
-            (2, 1, 5,  None, None, 1), # catVarId to '5'
-            (3, 1, 5,  22, None, 1), # dx to 22
-            (4, 1, 6,  None, 37, 1), # dy to 37
-            (5, 1, 6,  11, 15, 1), # catVarId 6, dx 11, dy 15
-            (6, 1, 9,  None, None, 1),
+            (0, 0, 0,  None, None, 0, 0),
+            (1, 1, 2,  None, None, 0, 1), # catVarId to '2'
+            (2, 1, 5,  None, None, 0, 1), # catVarId to '5'
+            (3, 1, 5,  22, None, 0, 1), # dx to 22
+            (4, 1, 6,  None, 37, 0, 1), # dy to 37
+            (5, 1, 6,  11, 15, 0, 1), # catVarId 6, dx 11, dy 15
+            (6, 1, 10,  9, 7, 0, 1),
+        )
+        expCats = (
+            #catId, pathRev, catName, validForLatest
+            (0, 0,    None, 0),
+            (1, 1,  'Farm', 1),
+            (2, 1, 'Horse', 1),
+            (3, 1,   'Pig', 1),
+            (4, 1,   'Dog', 1),
+            (5, 1,   'cow', 1),
+            (6, 1,   'sheep', 1),
+            (7, 1,   'Bird', 1),
+        )
+        expCatVars = (
+            #catVarId, pathRev, catId, catName, validForLatest
+            (0, 0, 0,      None, 0),
+            (1, 1, 1,      None, 1),
+            (2, 1, 2,      None, 1),
+            (3, 1, 3,      None, 1),
+            (4, 1, 4,      None, 1),
+            #skip variant for Farm
+            (5, 1, 2,  'horsey', 1),
+            (6, 1, 3,   'piggy', 1),
+            (7, 1, 4,  'doggie', 1),
+            (8, 1, 5,  None, 1),
+            (9, 1, 6,  None, 1),
+            (10, 1, 7,  None, 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        for (catNodeId, newCatVarId, newDx, newDy) in editCatNodes:
-            db.editCatNode(catNodeId, newCatVarId, newDx, newDy)
+        for (catNodeId, newCatVarId, newCatVarName, newDx, newDy) in editCatNodes:
+            db.editCatNode(catNodeId, newCatVarId, newCatVarName, newDx, newDy)
         actCatNodes = db.dumpTable('catNodes')
         self.compareTuples('catNodes', expCatNodes, actCatNodes, show)
-        
-    def REDOtest_03_addNodesWithNodeName(self):
+        actCats = db.dumpTable('categories')
+        self.compareTuples('categories', expCats, actCats, show)
+        actCatVars = db.dumpTable('catVariants')
+        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+
+    def test_09_editCategory(self):
         if not self.runAll:
-            if 3 not in self.runTestCounts:
+            if 9 not in self.runTestCounts:
                 return
         show = False
-        if show: print('  test_03_addNodes')
-        expNodesTuples = (
-            (0, 0,    None,    None, 1),
-            (1, 1,  'Farm',  'farm', 1),
-            (2, 2, 'Horse', 'horse', 1),
-            (3, 2,   'Pig',   'pig', 1),
-            (4, 2,   'Dog',   'dog', 1),
+        print('  test_09_editCategory')
+        edits = (
+            #cat_id, cat_name
+            (2, 'Horses'),
+            (3, 'Pigs'),
+            (4, 'Dogs'),
+            (5, 'Cows'),
+            (6, 'Sheep'),
+            (7, 'Fowl'),
         )
-        expPreNodesTuples = (
-            (0, 0, None, None, None, None, 1),
-            (1, 1, None, None, None, None, 1),
-            (2, 2, 1, 1, 1, None, 1),
-            (3, 2, 1, 1, 1, None, 1),
-            (4, 2, 1, 1, 1, None, 1),
+        expCats = (
+            #catId, pathRev, catName, validForLatest
+            (0, 0,    None, 0),
+            (1, 1,  'Farm', 1),
+            (2, 1, 'Horses', 1),
+            (3, 1,   'Pigs', 1),
+            (4, 1,   'Dogs', 1),
+            (5, 1,   'Cows', 1),
+            (6, 1,   'Sheep', 1),
+            (7, 1,   'Fowl', 1),
         )
-        expCategoriesTuples = (
-            (0, None, None),
-            (1, 1, 'animals')
+        expCatVars = (
+            #catVarId, pathRev, catId, catName, validForLatest
+            (0, 0, 0,      None, 0),
+            (1, 1, 1,      None, 1),
+            (2, 1, 2,      None, 1),
+            (3, 1, 3,      None, 1),
+            (4, 1, 4,      None, 1),
+            #skip variant for Farm
+            (5, 1, 2,  'horsey', 1),
+            (6, 1, 3,   'piggy', 1),
+            (7, 1, 4,  'doggie', 1),
+            (8, 1, 5,  None, 1),
+            (9, 1, 6,  None, 1),
+            (10, 1, 7,  None, 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        category = 'animals'
-        nodes = ('Horse', 'Pig', 'Dog')
-        preNode = 'Farm'
-#        db.addNodes((preNode,), None, None)
-        db.addNode(preNode)
-        db.addNodes(nodes, category_name = category, pre_node_name = preNode)
-        actNodesTuples = db.dumpTable('nodes')
-        self.compareTuples('nodes', expNodesTuples, actNodesTuples, show)
+        for i in range(len(edits)):
+            catId = edits[i][0]
+            catName = edits[i][1]
+            db.editCategory(catId, catName)
+            
+        actCats = db.dumpTable('categories')
+        self.compareTuples('categories', expCats, actCats, show)
+        actCatVars = db.dumpTable('catVariants')
+        self.compareTuples('catVariants', expCatVars, actCatVars, show)
 
-        actPreNodesTuples = db.dumpTable('preNodes')
-        self.compareTuples('preNodes', expPreNodesTuples, actPreNodesTuples, show)
-
-        actCategoriesTuples = db.dumpTable('categories')
-        self.compareTuples('categories', expCategoriesTuples, actCategoriesTuples, show)
-        
-    def REDOtest_04_getNodeIds(self):
-        if not self.runAll:
-            if 4 not in self.runTestCounts:
-                return
-        show = False
-        if show: print('  test_04_getNodeIds')
-        path = './test.db'
-        lock = multiprocessing.Lock()
-        db = CategorizerData(path, lock)
-        expNodeId = (2,)
-        actNodeId = db.getNodeIds('horse')
-        if show:
-            print('    horse nodeId, exp:', expNodeId, ', act', actNodeId, end=' ')
-            if expNodeId != actNodeId:
-                print('********************************* ERROR ****************************')
-            else: print()
-        else:
-            self.assertEqual(expNodeId, actNodeId)
-
-    def REDOtest_05_addNodesWithNodeId(self):
-        if not self.runAll:
-            if 5 not in self.runTestCounts:
-                return
-        show = False
-        if show: print('  test_05_addNodesWithNodeId')
-        expNodesTuples = (
-            (0, 0, None, None, None, 1),
-            (1, 1, 'farm', 1, 0, 1),
-            (2, 2, 'horse', 1, 0, 1),
-            (3, 2, 'pig', 1, 1, 1),
-            (4, 2, 'dog', 1, 2, 1),
-            (5, 3, 'Quarter horse', 1, 0, 1),
-            (6, 3, 'Mustang', 1, 1, 1),
-            (7, 3, 'Appaloosa', 1, 2, 1),
-            (8, 3, 'Morgan horse', 1, 3, 1),
-        )
-        expPreNodesTuples = (
-            (0, 0, None, None, None, None, 1),
-            (1, 1, None, None, None, None, 1),
-            (2, 2, 1, 1, 1, None, 1),
-            (3, 2, 1, 1, 1, None, 1),
-            (4, 2, 1, 1, 1, None, 1),
-            (5, 3, 2, 2, 2, None, 1),
-            (6, 3, 2, 2, 2, None, 1),
-            (7, 3, 2, 2, 2, None, 1),
-            (8, 3, 2, 2, 2, None, 1),
-        )
-        expCategoriesTuples = (
-            (0, None, None),
-            (1, 1, 'animals'),
-            (2, 2, 'Horse Breeds'),
-        )
-        path = './test.db'
-        lock = multiprocessing.Lock()
-        db = CategorizerData(path, lock)
-        nodeId = db.getNodeIds('horse')[0]
-        category = 'Horse Breeds'
-        nodes = ('Quarter horse', 'Mustang', 'Appaloosa', 'Morgan horse')
-        preNodeId = nodeId
-        db.addNodes(nodes, category, pre_node_id = preNodeId)
-        actNodesTuples = db.dumpTable('nodes')
-        self.compareTuples('nodes', expNodesTuples, actNodesTuples, show)
-
-        actPreNodesTuples = db.dumpTable('preNodes')
-        self.compareTuples('nodes', expPreNodesTuples, actPreNodesTuples, show)
-
-    def REDOtest_05_addNodesToCategory(self):
-        if not self.runAll:
-            if 5 not in self.runTestCounts:
-                return
-        show = False
-        if show: print('  test_05_addNodesToCategory')
-        expNodesTuples = (
-            (0, 0, None, None, None, 1),
-            (1, 1, 'farm', 1, 0, 1),
-            (2, 2, 'horse', 1, 0, 1),
-            (3, 2, 'pig', 1, 1, 1),
-            (4, 2, 'dog', 1, 2, 1),
-            (5, 3, 'Quarter horse', 1, 0, 1),
-            (6, 3, 'Mustang', 1, 1, 1),
-            (7, 3, 'Appaloosa', 1, 2, 1),
-            (8, 3, 'Morgan horse', 1, 3, 1),
-            (9, 4, 'sheep', 1, 0, 1),
-        )
-        expPreNodesTuples = (
-            (0, 0, None, None, None, None, 1),
-            (1, 1, None, None, None, None, 1),
-            (2, 2, 1, 1, 1, None, 1),
-            (3, 2, 1, 1, 1, None, 1),
-            (4, 2, 1, 1, 1, None, 1),
-            (5, 3, 2, 2, 2, None, 1),
-            (6, 3, 2, 2, 2, None, 1),
-            (7, 3, 2, 2, 2, None, 1),
-            (8, 3, 2, 2, 2, None, 1),
-            (9, 4, 1, 1, 1, None, 1)
-        )
-        expCategoriesTuples = (
-            (0, None, None),
-            (1, 1, 'animals'),
-            (2, 2, 'Horse Breeds'),
-        )
-        path = './test.db'
-        lock = multiprocessing.Lock()
-        db = CategorizerData(path, lock)
-        category = 'animals'
-        nodes = ('sheep',)
-        preNode = 'farm'
-        db.addNodesToCategory(nodes, category_name = category, pre_node_name = preNode)
-
-        actNodesTuples = db.dumpTable('nodes')
-        self.compareTuples('nodes', expNodesTuples, actNodesTuples, show)
-
-        actPreNodesTuples = db.dumpTable('preNodes')
-        self.compareTuples('nodes', expPreNodesTuples, actPreNodesTuples, show)
-
-        actCategoriesTuples = db.dumpTable('categories')
-        self.compareTuples('nodes', expCategoriesTuples, actCategoriesTuples, show)
-        
-    def REDOtest_06_getNodeInfo(self):
-        if not self.runAll:
-            if 6 not in self.runTestCounts:
-                return
-        show = False
-        if show: print('  test_06_getNodeInfo')
-        expNodeInfo = (
-            ('dog', ((4, 'dog', 1, 'animals', None, 1, 'farm'),)),
-        )
-        path = './test.db'
-        lock = multiprocessing.Lock()
-        db = CategorizerData(path, lock)
-
-        for (nodeName, expNodeInfo) in expNodeInfo:
-            actNodeInfo = db.getNodeInfo(nodeName)
-            if show:
-                print('  expNodeInfo', expNodeInfo)
-                print('  actNodeInfo', actNodeInfo)
-            else:
-                self.assertEqual(expNodeInfo, actNodeInfo)
-                
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
             print('   ', tuplesName,':')
