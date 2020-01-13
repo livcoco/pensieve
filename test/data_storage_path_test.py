@@ -10,16 +10,25 @@ import unittest
 import multiprocessing
 from context import CategorizerData
 import shutil
+import fuzzy
 
+# create global expect data.
+# start with the default values as defined in the class
+# as test are run, things are added and changed in the database,
+# and things are added and changed to the expect dataa
+EXPDATAA = {
+    'categories'    : [CategorizerData.tableInits['categories']],
+    'catVariants'   : [CategorizerData.tableInits['catVariants']],
+    'catNodes'      : [CategorizerData.tableInits['catNodes']],
+    'relations'     : [CategorizerData.tableInits['relations']],
+    'relVariants'   : [CategorizerData.tableInits['relVariants']],
+    'catConnections': [CategorizerData.tableInits['catConnections']],
+    'nodeStyles'    : [CategorizerData.tableInits['nodeStyles']],
+    'fonts'         : [CategorizerData.tableInits['fonts']],
+}
 class DataStoragePathTest(unittest.TestCase):
     runAll = True
-    runTestCounts = list(range(9))
-    #runTestCounts = [0]
-    #runTestCounts = [0, 1, 2]
-    #runTestCounts = [0, 1, 2, 3, 4]
-    #runTestCounts = [5,6]
-    #runTestCounts = [1,2,3,4,5,6,7]
-    #runTestCounts = [1,2,3,4,5,6,7,8]
+    runTestCounts = list(range(12))
     
     def test_00_instantiate(self):
         if not self.runAll:
@@ -52,32 +61,33 @@ class DataStoragePathTest(unittest.TestCase):
                 return
         show = False
         print('  test_02_addCategory')
-        expCats = (
-            #catId, pathRev, catName, validForLatest
-            (0, 0,    None, 0),
-            (1, 1,  'Farm', 1),
-            (2, 1, 'Horse', 1),
-            (3, 1,   'Pig', 1),
-            (4, 1,   'Dog', 1),
+        addCats = ('Farm', 'Horse', 'Pig', 'Dog')
+        newExpCats = (
+            #catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
+            (1, 1,  'Farm', 'FRM', '', 1),
+            (2, 1, 'Horse', 'HRS', '', 1),
+            (3, 1,   'Pig', 'PK', '', 1),
+            (4, 1,   'Dog', 'TK', '', 1),
         )
-        expCatVars = (
-            #catVarId, pathRev, catId, catVarName, validForLatest
-            (0, 0, 0,   None, 0),
-            (1, 1, 1,   None, 1),
-            (2, 1, 2,   None, 1),
-            (3, 1, 3,   None, 1),
-            (4, 1, 4,   None, 1),
+        newExpCatVars = (
+            #catVarId, pathRev, catId, catVarName, dMetaName0, dMetaName1, validForLatest
+            (1, 1, 1,   None, '', '', 1),
+            (2, 1, 2,   None, '', '', 1),
+            (3, 1, 3,   None, '', '', 1),
+            (4, 1, 4,   None, '', '', 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        for i in range(1, len(expCats)):
-            cat = expCats[i][2]
+        dMeta = fuzzy.DMetaphone()
+        for idx, cat in enumerate(addCats):
             db._addCategory(cat)
+        self._addExpDataa('categories', newExpCats)
+        self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
-        self.compareTuples('categories', expCats, actCats, show)
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
         actCatVars = db.dumpTable('catVariants')
-        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
 
     def test_03_addCategoryVariant(self):
         if not self.runAll:
@@ -91,17 +101,11 @@ class DataStoragePathTest(unittest.TestCase):
             (6, 1, 3,   'piggy', 1),
             (7, 1, 4,  'doggie', 1),
         )
-        expCatVars = (
-            #catVarId, pathRev, catId, catName, validForLatest
-            (0, 0, 0,      None, 0),
-            (1, 1, 1,      None, 1),
-            (2, 1, 2,      None, 1),
-            (3, 1, 3,      None, 1),
-            (4, 1, 4,      None, 1),
+        newExpCatVars = (
             #skip variant for Farm
-            (5, 1, 2,  'horsey', 1),
-            (6, 1, 3,   'piggy', 1),
-            (7, 1, 4,  'doggie', 1),
+            (5, 1, 2,  'horsey', 'HRS', '', 1),
+            (6, 1, 3,   'piggy', 'PK', '',  1),
+            (7, 1, 4,  'doggie', 'TJ', 'TK',  1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
@@ -110,8 +114,11 @@ class DataStoragePathTest(unittest.TestCase):
             catId = addCatVars[i][2]
             catVarName = addCatVars[i][3]
             db._addCatVariant(catId, catVarName)
+        self._addExpDataa('catVariants', newExpCatVars)
+        actCats = db.dumpTable('categories')
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
         actCatVars = db.dumpTable('catVariants')
-        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
 
     def test_04_addCatNode(self):
         if not self.runAll:
@@ -128,39 +135,25 @@ class DataStoragePathTest(unittest.TestCase):
             (None, 'cow'),
             (None, 'sheep'),
         )
-        expCatNodes = (
+        newExpCatNodes = (
             #catNodeId, pathRev, catVarId, dx, dy, nodeStyleId, validForLatest
-            (0, 0, 0,  None, None, 0, 0),
-            (1, 1, 1,  None, None, 0, 1),
-            (2, 1, 2,  None, None, 0, 1),
-            (3, 1, 5,  None, None, 0, 1),
-            (4, 1, 6,  None, None, 0, 1),
-            (5, 1, 8,  None, None, 0, 1),
-            (6, 1, 9,  None, None, 0, 1),
+#            (0, 0, 0,  None, None, 0, 0),
+            (1, 1, 1,  None, None, None, 0, 1),
+            (2, 1, 2,  None, None, None, 0, 1),
+            (3, 1, 5,  None, None, None, 0, 1),
+            (4, 1, 6,  None, None, None, 0, 1),
+            (5, 1, 8,  None, None, None, 0, 1),
+            (6, 1, 9,  None, None, None, 0, 1),
         )
-        expCats = (
+        newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (0, 0,    None, 0),
-            (1, 1,  'Farm', 1),
-            (2, 1, 'Horse', 1),
-            (3, 1,   'Pig', 1),
-            (4, 1,   'Dog', 1),
-            (5, 1,   'cow', 1),
-            (6, 1,   'sheep', 1),
+            (5, 1,   'cow', 'K', 'KF',1),
+            (6, 1,   'sheep', 'XP', '', 1),
         )
-        expCatVars = (
+        newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
-            (0, 0, 0,      None, 0),
-            (1, 1, 1,      None, 1),
-            (2, 1, 2,      None, 1),
-            (3, 1, 3,      None, 1),
-            (4, 1, 4,      None, 1),
-            #skip variant for Farm
-            (5, 1, 2,  'horsey', 1),
-            (6, 1, 3,   'piggy', 1),
-            (7, 1, 4,  'doggie', 1),
-            (8, 1, 5,  None, 1),
-            (9, 1, 6,  None, 1),
+            (8, 1, 5,  None, '', '', 1),
+            (9, 1, 6,  None, '', '', 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
@@ -169,46 +162,55 @@ class DataStoragePathTest(unittest.TestCase):
             catVarId = addCatNodes[i][0]
             catVarName = addCatNodes[i][1]
             db.addCatNode(catVarId, catVarName)
-            
-        actCatNodes = db.dumpTable('catNodes')
-        self.compareTuples('catNodes', expCatNodes, actCatNodes, show)
-        actCats = db.dumpTable('categories')
-        self.compareTuples('categories', expCats, actCats, show)
-        actCatVars = db.dumpTable('catVariants')
-        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+        self._addExpDataa('categories', newExpCats)
+        self._addExpDataa('catVariants', newExpCatVars)
+        self._addExpDataa('catNodes', newExpCatNodes)
         
+        actCats = db.dumpTable('categories')
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
+        actCatVars = db.dumpTable('catVariants')
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
+        actCatNodes = db.dumpTable('catNodes')
+        self.compareTuples('catNodes', EXPDATAA['catNodes'], actCatNodes, show)
+
     def test_05_addRelation(self):
         if not self.runAll:
             if 5 not in self.runTestCounts:
                 return
         show = False
         print('  test_05_addRelation')
+        addRels = (
+            #prefix, relName, validForLatest
+            ('hyper', 'is-a', 'out'),
+            ('super', 'has-a', 'in'),
+            ('pre', 'prior in sequence', 'out'),
+            ('pre', 'prior in cycle', 'out'),
+        )
         expRels = (
-            #relId*, pathRev*, prefix, relName, validForLatest
-            (0, 0, None, None, None, 0),
-            (1, 1, 'hyper', 'is-a', 'out', 1),
-            (2, 1, 'super', 'has-a', 'in', 1),
-            (3, 1, 'pre', 'prior in sequence', 'out',1),
-            (4, 1, 'pre', 'prior in cycle', 'out', 1),
+            #relId*, pathRev*, prefix, relName, dMetaName0, dMetaName1, direction, validForLatest
+            (1, 1, 'hyper', 'is-a', 'AS', '', 'out', 1),
+            (2, 1, 'super', 'has-a', 'HS', '', 'in', 1),
+            (3, 1, 'pre', 'prior in sequence', 'PRRN', '', 'out',1),
+            (4, 1, 'pre', 'prior in cycle', 'PRRN', '', 'out', 1),
         )
         expRelVars = (
             #relVarId*, pathRev*, relId, relVarPrefix, relVarName, varDirection, validForLatest
-            (0, 0, 0,   None, None, None, 0),
-            (1, 1, 1,   None, None, None, 1),
-            (2, 1, 2,   None, None, None, 1),
-            (3, 1, 3,   None, None, None, 1),
-            (4, 1, 4,   None, None, None, 1),
+            (1, 1, 1,   None, None, '', '', None, 1),
+            (2, 1, 2,   None, None, '', '', None, 1),
+            (3, 1, 3,   None, None, '', '', None, 1),
+            (4, 1, 4,   None, None, '', '', None, 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        for i in range(1, len(expRels)):
-            rel = expRels[i]
-            db._addRelation(rel[2], rel[3], rel[4])
+        for (relPrefix, relName, direction) in addRels:
+            db._addRelation(relPrefix, relName, direction)
+        self._addExpDataa('relations', expRels)
+        self._addExpDataa('relVariants', expRelVars)
         actRels = db.dumpTable('relations')
-        self.compareTuples('relations', expRels, actRels, show)
+        self.compareTuples('relations', EXPDATAA['relations'], actRels, show)
         actRelVars = db.dumpTable('relVariants')
-        self.compareTuples('relVariants', expRelVars, actRelVars, show)
+        self.compareTuples('relVariants', EXPDATAA['relVariants'], actRelVars, show)
 
     def test_06_addRelationVariant(self):
         if not self.runAll:
@@ -217,30 +219,25 @@ class DataStoragePathTest(unittest.TestCase):
         show = False
         print('  test_06_addRelationVariant')
         addRelVars = (
-            #skip variant for Farm
-            (5, 1, 2, None, 'reverse has-a', 'out', 1),
-            (6, 1, 3, 'prePIS', 'PIS', None, 1),
-            (7, 1, 4, 'prePIC', 'PIC', None, 1),
+            #relId, relVarPrefix, relVarName, varDirection
+            (2, None, 'reverse has-a', 'out'),
+            (3, 'prePIS', 'PIS', None),
+            (4, 'prePIC', 'PIC', None),
         )
-        expRelVars = (
+        newExpRelVars = (
             #relVarId, pathRev, relId, relVarPrefix, relVarName, varDirection, validForLatest
-            (0, 0, 0, None, None, None, 0),
-            (1, 1, 1, None, None, None, 1), #default for relId 1, e.g. 'is-a'
-            (2, 1, 2, None, None, None, 1), #default for relId 2, e.g. 'has-a'
-            (3, 1, 3, None, None, None, 1), #default for relId 3, e.g. 'prior in sequence'
-            (4, 1, 4, None, None, None, 1), #default for relId 4, e.g. 'prior in cycle'
-            (5, 1, 2, None, 'reverse has-a', 'out', 1), #new relation variant for relId 2 with new direction
-            (6, 1, 3, 'prePIS', 'PIS', None, 1), #new relation variant for relId 3
-            (7, 1, 4, 'prePIC', 'PIC', None, 1), #new relation variant for relId 4
+            (5, 1, 2, None, 'reverse has-a', 'RFRS', '', 'out', 1), #new relation variant for relId 2 with new direction
+            (6, 1, 3, 'prePIS', 'PIS', 'PS', '', None, 1), #new relation variant for relId 3
+            (7, 1, 4, 'prePIC', 'PIC', 'PK', '', None, 1), #new relation variant for relId 4
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        for i in range(len(addRelVars)):
-            relVars = addRelVars[i]
-            db._addRelVariant(relVars[2], relVars[3], relVars[4], relVars[5])
+        for (relId, relVarPrefix, relVarName, direction) in addRelVars:
+            db._addRelVariant(relId, relVarPrefix, relVarName, direction)
+        self._addExpDataa('relVariants', newExpRelVars)
         actRelVars = db.dumpTable('relVariants')
-        self.compareTuples('relVariants', expRelVars, actRelVars, show)
+        self.compareTuples('relVariants', EXPDATAA['relVariants'], actRelVars, show)
 
     def test_07_addConnection(self):
         '''
@@ -251,36 +248,34 @@ class DataStoragePathTest(unittest.TestCase):
         if not self.runAll:
             if 7 not in self.runTestCounts:
                 return
-        necessaryPreTests = set([1,2,3,4,5,6])
-        if necessaryPreTests != set(self.runTestCounts).intersection(necessaryPreTests):
-            print('ERROR - to run test_07, must run tests', necessaryPreTests)
         show = False
         print('  test_07_addConnection')
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
         addConns = (
-            #catNodeId, superCatNodeId, relVarId
+            #catNodeId, superCatNodeId, relVarId, connStyleId
             (4, 3, 3, None), #1 create a connection from relVarId 3, i.e. 
             (4, 3, 0, None), #2 just make an unspecified connection, (default relationVariant)
             (4, 3, None, 'reverse has-a'), #3 make a connection based on an existing relVarName
             (4, 3, None, 'is-a'), #4 make a connection based on an existing relation Name
             (4, 3, None, 'from'), #5 make a connection based on a new relation Name
             )
-        expCatConns = (
-            #catNodeId, pathRev, relVarId, superCatNodeId, connStyleId validForLatest
-            (0, 0, 0, None, 0, 0), #default, always there. created during database init
-            (4, 1, 3, 3, 0, 1), #1
-            (4, 1, 0, 3, 0, 1), #2
-            (4, 1, 5, 3, 0, 1), #3
-            (4, 1, 1, 3, 0, 1), #4
-            (4, 1, 8, 3, 0, 1), #5
+        newExpCatConns = (
+            #catConnId, pathRev, catNodeId, superCatNodeId, relVarId, connStyleId validForLatest
+            (1, 1, 4, 3, 3, 0, 1),
+            (2, 1, 4, 3, 0, 0, 1),
+            (3, 1, 4, 3, 5, 0, 1),
+            (4, 1, 4, 3, 1, 0, 1),
+            (5, 1, 4, 3, 8, 0, 1),
         )
         for (catNodeId, superCatNodeId, relVarId, relVarName) in addConns:
             #                from       to              use one of these or neither
             db.addConnection(catNodeId, superCatNodeId, relVarId, relVarName)
+        self._addExpDataa('catConnections', newExpCatConns)
+        
         actCatConns = db.dumpTable('catConnections')
-        self.compareTuples('catConnections', expCatConns, actCatConns, show)
+        self.compareTuples('catConnections', EXPDATAA['catConnections'], actCatConns, show)
 
     def test_08_editCatNode(self):
         '''
@@ -293,67 +288,48 @@ class DataStoragePathTest(unittest.TestCase):
         if not self.runAll:
             if 8 not in self.runTestCounts:
                 return
-        necessaryPreTests = set([1,2,3,4,5,6,7])
-        if necessaryPreTests != set(self.runTestCounts).intersection(necessaryPreTests):
-            print('ERROR - to run test_08, must run tests', necessaryPreTests)
         show = False
         print('  test_08_editCatNode')
         editCatNodes = (
-            #catNodeId, newCatVarId, newDx, newDy
-            (1, 2, None, None, None), #change from 1: 'Farm' to 2: 'Horse'
-            (2, 5, None, None, None), #change from 2: 'Horse' to 5: 'Horsey'
-            (3, 5, None, 22, None), # change dx to 22
-            (4, 6, None, None, 37), # change dy to 37
-            (5, 6, None, 11, 15), # change catVarId 6, dx to 11, dy 15
-            (6, None, 'Bird', 9, 7), # change catVarId 6, dx to 11, dy 15
+            #catNodeId, newCatVarId, newDx, newDy, newDz
+            (1, 2, None, None, None, None), #change from 1: 'Farm' to 2: 'Horse'
+            (2, 5, None, None, None, None), #change from 2: 'Horse' to 5: 'Horsey'
+            (3, 5, None, 22, None, None), # change dx to 22
+            (4, 6, None, None, None, 37), # change dy to 37
+            (5, 6, None, 11, 15, 4), # change catVarId 6, dx to 11, dy 15
+            (6, None, 'Bird', 9, 7, 5), # add new catVarName 'Bird', change dx to 9, dy 7
         )
-        expCatNodes = (
-            #catNodeId, pathRev, catVarId, dx, dy, validForLatest
-            (0, 0, 0,  None, None, 0, 0),
-            (1, 1, 2,  None, None, 0, 1), # catVarId to '2'
-            (2, 1, 5,  None, None, 0, 1), # catVarId to '5'
-            (3, 1, 5,  22, None, 0, 1), # dx to 22
-            (4, 1, 6,  None, 37, 0, 1), # dy to 37
-            (5, 1, 6,  11, 15, 0, 1), # catVarId 6, dx 11, dy 15
-            (6, 1, 10,  9, 7, 0, 1),
+        newExpCatNodes = (
+            #catNodeId, pathRev, catVarId, dx, dy, dz, validForLatest
+            (1, 1, 2,  None, None, None, 0, 1), # catVarId to '2'
+            (2, 1, 5,  None, None, None, 0, 1), # catVarId to '5'
+            (3, 1, 5,  22, None, None, 0, 1), # dx to 22
+            (4, 1, 6,  None, None, 37, 0, 1), # dz to 37
+            (5, 1, 6,  11, 15, 4, 0, 1), # catVarId 6, dx 11, dy 15, dz 4
+            (6, 1, 10,  9, 7, 5, 0, 1),
         )
-        expCats = (
+        newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (0, 0,    None, 0),
-            (1, 1,  'Farm', 1),
-            (2, 1, 'Horse', 1),
-            (3, 1,   'Pig', 1),
-            (4, 1,   'Dog', 1),
-            (5, 1,   'cow', 1),
-            (6, 1,   'sheep', 1),
-            (7, 1,   'Bird', 1),
+            (7, 1,   'Bird', 'PRT', '', 1),
         )
-        expCatVars = (
+        newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
-            (0, 0, 0,      None, 0),
-            (1, 1, 1,      None, 1),
-            (2, 1, 2,      None, 1),
-            (3, 1, 3,      None, 1),
-            (4, 1, 4,      None, 1),
-            #skip variant for Farm
-            (5, 1, 2,  'horsey', 1),
-            (6, 1, 3,   'piggy', 1),
-            (7, 1, 4,  'doggie', 1),
-            (8, 1, 5,  None, 1),
-            (9, 1, 6,  None, 1),
-            (10, 1, 7,  None, 1),
+            (10, 1, 7,  None, '', '', 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
-        for (catNodeId, newCatVarId, newCatVarName, newDx, newDy) in editCatNodes:
-            db.editCatNode(catNodeId, newCatVarId, newCatVarName, newDx, newDy)
+        for (catNodeId, newCatVarId, newCatVarName, newDx, newDy, newDz) in editCatNodes:
+            db.editCatNode(catNodeId, newCatVarId, newCatVarName, newDx, newDy, newDz)
+        self._addExpDataa('categories', newExpCats)
+        self._addExpDataa('catVariants', newExpCatVars)
+        self._addExpDataa('catNodes', newExpCatNodes)
         actCatNodes = db.dumpTable('catNodes')
-        self.compareTuples('catNodes', expCatNodes, actCatNodes, show)
+        self.compareTuples('catNodes', EXPDATAA['catNodes'], actCatNodes, show)
         actCats = db.dumpTable('categories')
-        self.compareTuples('categories', expCats, actCats, show)
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
         actCatVars = db.dumpTable('catVariants')
-        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
 
     def test_09_editCategory(self):
         if not self.runAll:
@@ -370,31 +346,17 @@ class DataStoragePathTest(unittest.TestCase):
             (6, 'Sheep'),
             (7, 'Fowl'),
         )
-        expCats = (
+        newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (0, 0,    None, 0),
-            (1, 1,  'Farm', 1),
-            (2, 1, 'Horses', 1),
-            (3, 1,   'Pigs', 1),
-            (4, 1,   'Dogs', 1),
-            (5, 1,   'Cows', 1),
-            (6, 1,   'Sheep', 1),
-            (7, 1,   'Fowl', 1),
+            (2, 1, 'Horses', 'HRSS', '', 1),
+            (3, 1,   'Pigs', 'PKS', '', 1),
+            (4, 1,   'Dogs', 'TKS', '', 1),
+            (5, 1,   'Cows', 'KS', '', 1),
+            (6, 1,  'Sheep', 'XP', '', 1),
+            (7, 1,   'Fowl', 'FL', '', 1),
         )
-        expCatVars = (
+        newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
-            (0, 0, 0,      None, 0),
-            (1, 1, 1,      None, 1),
-            (2, 1, 2,      None, 1),
-            (3, 1, 3,      None, 1),
-            (4, 1, 4,      None, 1),
-            #skip variant for Farm
-            (5, 1, 2,  'horsey', 1),
-            (6, 1, 3,   'piggy', 1),
-            (7, 1, 4,  'doggie', 1),
-            (8, 1, 5,  None, 1),
-            (9, 1, 6,  None, 1),
-            (10, 1, 7,  None, 1),
         )
         path = './test.db'
         lock = multiprocessing.Lock()
@@ -403,11 +365,123 @@ class DataStoragePathTest(unittest.TestCase):
             catId = edits[i][0]
             catName = edits[i][1]
             db.editCategory(catId, catName)
-            
+        self._addExpDataa('categories', newExpCats)
+        self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
-        self.compareTuples('categories', expCats, actCats, show)
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
         actCatVars = db.dumpTable('catVariants')
-        self.compareTuples('catVariants', expCatVars, actCatVars, show)
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
+
+    def test_10_editCatVariant(self):
+        if not self.runAll:
+            if 10 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_10_editCatVariant')
+        edits = (
+            #cat_var_id, cat_var_name
+            (5, 'horseee'),
+            (6, 'oink oink'),
+            (7, 'woof dog'),
+        )
+        newExpCats = (
+            #catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
+        )
+        newExpCatVars = (
+            #catVarId, pathRev, catId, catName, dMetaName0, dMetaName1, validForLatest
+            (5, 1, 2,  'horseee', 'HRS', '', 1),
+            (6, 1, 3,   'oink oink', 'ANKN', '', 1),
+            (7, 1, 4,  'woof dog', 'AFTK', 'FFTK', 1),
+        )
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        for i in range(len(edits)):
+            catVarId = edits[i][0]
+            catVarName = edits[i][1]
+            db.editCatVariant(catVarId, catVarName)
+
+        self._addExpDataa('catVariants', newExpCatVars)
+        self._addExpDataa('categories', newExpCats)
+        actCats = db.dumpTable('categories')
+        self.compareTuples('categories', EXPDATAA['categories'], actCats, show)
+        actCatVars = db.dumpTable('catVariants')
+        self.compareTuples('catVariants', EXPDATAA['catVariants'], actCatVars, show)
+
+    def test_11_editConnection(self):
+        '''
+        edit a connection between catNodes
+        find the relation for the connection if it exists
+        make a new relation if it does not exist.
+        '''
+        if not self.runAll:
+            if 11 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_11_editConnection')
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        editConns = (
+            #catConnId, catNodeId, superCatNodeId, relVarId, relVarName, connStyleId
+            (2, 3, 4, None, None, None), #reverse the connection
+            (3, None, None, 1, None, None), #change the relation using a relVarId
+            (5, None, None, None, 'reverse has-a', None), # change the relation using a relVarName
+            )
+        newExpCatConns = (
+            #catConnId, pathRev, catNodeId, superCatNodeId, relVarId, connStyleId validForLatest
+            (2, 1, 3, 4, 0, 0, 1),
+            (3, 1, 4, 3, 1, 0, 1),
+            (5, 1, 4, 3, 5, 0, 1),
+        )
+        for (catConnId, catNodeId, superCatNodeId, relVarId, relVarName, connStyleId) in editConns:
+            #                from       to              use one of these or neither
+            db.editConnection(catConnId, catNodeId, superCatNodeId, relVarId, relVarName, connStyleId)
+        self._addExpDataa('catConnections', newExpCatConns)
+        
+        actCatConns = db.dumpTable('catConnections')
+        self.compareTuples('catConnections', EXPDATAA['catConnections'], actCatConns, show)
+
+    def test_12_addNodeStyle(self):
+        '''
+        '''
+        if not self.runAll:
+            if 12 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_12_addNodeStyle')
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        addNodeStyles = (
+            #styleName, fontId, fontfamily, fontStyle, fontSize, fontColor, backgroundColor, transparency
+            ('typical'   , None,      None,   None, None,    None, None, None),
+            ('bigNBold'  , None, 'Verdana', 'bold',   16, 'Black', None, None), #make new font
+            ('seeThroughRed', None,   None,   None, None,    None, 'Red', 50),
+            ('blueBigNBold', None,'Verdana', 'bold',   16, 'Black', 'Blue', 30), #get exising font from description
+            ('plainBold', 1,   None,   None, None,    None, 'Black', None), #use existing font by fontId
+            )
+        newNodeStyles = (
+            #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgorundCXolor, transparency, validForLatest
+            (1, 1, 'typical', 'TPKL', '', 0, None, None, 1),
+            (2, 1, 'bigNBold', 'PNPL', 'PKNP', 1, None, None, 1),
+            (3, 1, 'seeThroughRed', 'S0RR', 'STRR', 0, 'Red', 50, 1),
+            (4, 1, 'blueBigNBold', 'PLPN', 'PLPK', 1, 'Blue', 30, 1),
+            (5, 1, 'plainBold', 'PLNP', '', 1, 'Black', None, 1),
+        )
+        newFonts = (
+            (1, 1, 'Verdana', 'bold', 16, 'Black', 1),
+        )
+        for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStyles:
+            #                from       to              use one of these or neither
+            db.addNodeStyle(styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency)
+        self._addExpDataa('nodeStyles', newNodeStyles)
+        self._addExpDataa('fonts', newFonts)
+        
+        actNodeStyles = db.dumpTable('nodeStyles')
+        actFonts = db.dumpTable('fonts')
+        self.compareTuples('nodeStyles', EXPDATAA['nodeStyles'], actNodeStyles, show)
+        self.compareTuples('fonts', EXPDATAA['fonts'], actFonts, show)
 
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
@@ -434,7 +508,63 @@ class DataStoragePathTest(unittest.TestCase):
                         
             print('  got', showErrorCnt, 'ERRORS')
         else:
-            self.assertEqual(expTuples, actTuples)
+            self.assertEqual(tuple(expTuples), tuple(actTuples))
+
+    def _addExpCats(self, expCats):
+        for newExpCat in expCats:
+            expCatIdx = newExpCat[0]
+            if expCatIdx < len(EXPCATS):
+                EXPCATS[expCatIdx] = newExpCat
+            else:
+                EXPCATS.append(newExpCat)
         
+    def _addExpCatVars(self, expCatVars):
+        for newExpCatVar in expCatVars:
+            expCatVarIdx = newExpCatVar[0]
+            if expCatVarIdx < len(EXPCATVARS):
+                EXPCATVARS[expCatVarIdx] = newExpCatVar
+            else:
+                EXPCATVARS.append(newExpCatVar)
+
+    def _addExpCatNodes(self, expCatNodes):
+        for newExpCatNode in expCatNodes:
+            expCatNodeIdx = newExpCatNode[0]
+            if expCatNodeIdx < len(EXPCATNODES):
+                EXPCATNODES[expCatNodeIdx] = newExpCatNode
+            else:
+                EXPCATNODES.append(newExpCatNode)
+        
+    def _addExpRels(self, expRels):
+        for newRel in expRels:
+            expRelIdx = newRel[0]
+            if expRelIdx < len(EXPRELS):
+                EXPRELS[expRelIdx] = newRel
+            else:
+                EXPRELS.append(newRel)
+        
+    def _addExpRelVars(self, expRelVars):
+        for newRelVar in expRelVars:
+            expRelVarIdx = newRelVar[0]
+            if expRelVarIdx < len(EXPRELVARS):
+                EXPRELVARS[expRelVarIdx] = newRelVar
+            else:
+                EXPRELVARS.append(newRelVar)
+        
+    def _addExpCatConns(self, expCatConns):
+        for newCatConn in expCatConns:
+            expCatConnIdx = newCatConn[0]
+            if expCatConnIdx < len(EXPCATCONNS):
+                EXPCATCONNS[expCatConnIdx] = newCatConn
+            else:
+                EXPCATCONNS.append(newCatConn)
+
+    def _addExpDataa(self, name, dataa):
+        for data in dataa:
+            dataIdx = data[0]
+            if dataIdx < len(EXPDATAA[name]):
+                EXPDATAA[name][dataIdx] = data
+            else:
+                EXPDATAA[name].append(data)
+                
 if __name__ == '__main__':
     unittest.main()
