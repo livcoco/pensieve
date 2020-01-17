@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 '''
 history:
+1/15/20 - use join() instead of += for strings? e.g. ', '.join( ('a','b','c') )  ... ', '.join(it[j] for j in range(0, len(it), 2))
+          create fontSet namedtuple, as well as lineSet, headTypeSet and pass as arguments.
 1/1/20 - added Double Metaphone (improvement on Soundex) to my system from https://pypi.org/project/Fuzzy/
 11/6 - cleaned up editCatNode()
 12/19 - eliminate tableInits?
@@ -75,6 +77,7 @@ class CategorizerData:
     
     def __init__(self, database_path_and_file_name, lock, in_memory = False, create_new_database = False):
         show = False
+        if show: print('in CategorizerData.__init__()')
         if in_memory:
             self.db = sqlite3.connect(":memory:")
             self.db.isolation_level = None
@@ -91,8 +94,6 @@ class CategorizerData:
         #videoEdit = 'id INTEGER PRIMARY KEY UNIQUE NOT NULL, noteText BLOB'
         #audioEdit = 'id INTEGER PRIMARY KEY UNIQUE NOT NULL, noteText BLOB'
 
-        #schema:
-
         # make the sql for adding entries and dumping the contents of the tables, e.g.
         #   INSERT INTO categories (catId, pathRev, catName, validForLatest) VALUES (?, ?, ?, ?)
         #   SELECT catId, pathRev, catName, validForLatest from categories
@@ -104,36 +105,19 @@ class CategorizerData:
         self.sqlDumps = {}
         self.columnNames = {}
         for tableName in self.columnSpecs.keys():
-            sqlAdd = 'INSERT INTO ' + tableName + ' ('
-            sqlDump = 'SELECT '
-            columnNames = []
             columnSpec = self.columnSpecs[tableName]
-            names = columnSpec.split()
-            primaryIdx = names.index('PRIMARY')
-            names = names[:primaryIdx]
+            namesVarTypes = columnSpec.split()
+            primaryIdx = namesVarTypes.index('PRIMARY')
+            namesVarTypes = namesVarTypes[:primaryIdx]
+            names = tuple([ namesVarTypes[idx] for idx in range(0, len(namesVarTypes), 2) ])
+            self.columnNames[tableName] = names
+            self.sqlAdds[tableName] = f'INSERT INTO {tableName} ({", ".join(names)}) VALUES ({", ".join(["?"] * (len(names)))})'
+            self.sqlDumps[tableName] = f'SELECT {", ".join(names)} from {tableName}'
             if show:
                 print('  tableName', tableName, ': columnSpecs', self.columnSpecs[tableName])
-            for i in range(0, len(names), 2):
-                sqlAdd += names[i] + ', '
-                sqlDump += names[i] + ', '
-                columnNames.append(names[i])
-            sqlAdd = sqlAdd[:-2]
-            sqlDump = sqlDump[:-2]
-            sqlAdd += ') VALUES ('
-            for i in range(0, len(names), 2):
-                sqlAdd += '?, '
-            sqlAdd = sqlAdd[:-2]
-            sqlAdd += ')'
-            sqlDump += ' from ' + tableName
-            if show:
-                print('  tableName', tableName, ':')
-                print('    sqlAdd', sqlAdd)
-                print('    sqlDump', sqlDump)
-                print('    columnNames', tuple(columnNames))
-            self.sqlAdds[tableName] = sqlAdd
-            self.sqlDumps[tableName] = sqlDump
-            self.columnNames[tableName] = tuple(columnNames)
-            
+                print('    sqlAdd', self.sqlAdds[tableName])
+                print('    sqlDump', self.sqlDumps[tableName])
+                print('    columnNames', self.columnNames[tableName])
 
         if create_new_database:
             if show: print('  creating new database')
@@ -147,78 +131,6 @@ class CategorizerData:
                     assert False, 'I was asked to create a new database, but there is already a database with something in it'
                 except sqlite3.OperationalError:
                     self._addTable(tableName)
-
-    def _OLDgetNodeInfo(self, node_name):
-        '''
-        returns all instances of node_name both for standard name and aliases. 
-        if node_name exists:
-          return (
-                  (nodeIdA, nodeName, categoryId1, categoryName1, alias1, preNodeId1, preNodeName1), 
-                  (nodeIdA, nodeName, categoryId2, categoryName2, alias2, preNodeId2, preNodeName2),
-                  (nodeIdB, nodeName, categoryId3, categoryName3, alias3, preNodeId3, preNodeName3),
-                  ... ,
-                 )
-        else:
-          return ()
-        '''
-
-        # get the data from 'categories' for this node name
-        nodesData = []
-        cursor = self.dbCursor.execute(r'SELECT nodeId FROM nodes WHERE name == "' + node_name + '" AND validForLatest > 0')
-        while True:
-            data = cursor.fetchone()
-            if not data:
-                break
-            (nodeId, ) = data
-            nodesData.append( (nodeId, node_name) )
-
-        # the node_name could be an alias, so get the data from preNodes
-        preNodesData = []
-        cursor = self.dbCursor.execute(r'SELECT nodeId FROM preNodes WHERE nameAlias == "' + node_name + '" AND validForLatest > 0')
-        while True:
-            data = cursor.fetchone()
-            if not data:
-                break
-            
-            (nodeId, ) = data
-            preNodesData.append(nodeId)
-
-        # get the preNodes names
-        for preNodeId in preNodesData:
-            cursor = self.dbCursor.execute(r'SELECT name FROM nodes WHERE nodeId == ' + str(preNodeId) + ' AND validForLatest > 0')
-            (name,) = cursor.fetchone()
-            nodesData.append( (preNodeId, name) )
-        
-        # get data from preNodes table
-        retData = []
-        for (nodeId, name) in nodesData:
-            cursor = self.dbCursor.execute(r'SELECT preNodeId, categoryId, nameAlias from preNodes WHERE nodeId == ' + str(nodeId) + ' AND validForLatest > 0')
-            while True:
-                data = cursor.fetchone()
-                if not data:
-                    break
-                (preNodeId, categoryId, nameAlias) = data
-                #                                        catName                    preNodeName
-                retData.append( [nodeId, name, categoryId, None, nameAlias, preNodeId, None] )
-
-        #get the preNode names
-        for idx in range(len(retData)):
-            (nodeId, name, categoryId, categoryName, nameAlias, preNodeId, preNodeName) = retData[idx]
-            cursor = self.dbCursor.execute(r'SELECT name from nodes WHERE nodeId == ' + str(preNodeId))
-            (name,) = cursor.fetchone()
-            retData[idx][6] = name
-            
-        # get the preCategory names
-        for idx in range(len(retData)):
-            (nodeId, name, categoryId, categoryName, nameAlias, preNodeId, preNodeName) = retData[idx]
-            cursor = self.dbCursor.execute(r'SELECT catName from categories WHERE categoryId == ' + str(categoryId))
-            (categoryName,) = cursor.fetchone()
-            retData[idx][3] = categoryName
-
-        for idx in range(len(retData)):
-            retData[idx] = tuple(retData[idx])
-
-        return tuple(retData)
 
     def _getPathRev(self):
         # get the pathRev
@@ -275,6 +187,7 @@ class CategorizerData:
                 
         if conn_style_id == None:
             conn_style_id = 0
+
         #get the next catConnId
         cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['catConnections'][0] + ') FROM catConnections')
         (catConnId,) = cursor.fetchone()
@@ -320,6 +233,7 @@ class CategorizerData:
             sql = 'SELECT ({ccni}, {pr}, {cni}, {scni}, {rvi}, {csi} FROM catNodes '.format(ccni=catConnIdName, pr=pathRevName, cni=catNodeIdName, scni=superCatNodeIdName, rvi=relVaiIdName, csi=connStyleIdName) + sqlWhere
             cursor = self.dbCursor.execute(sql)
             (catConnId, rowPathRev, oldCatNodeId, oldSuperCatNodeId, oldRelVarId, oldConnStyleId) = cursor.fetchone()
+
             # mark the old row as no longer the latest
             name, value = self.columnNames['catConnections'][-1], 0
             sql = 'UPDATE catConnections set {col} = {val}'.format(col = name, val = value) + sqlWhere
@@ -700,6 +614,16 @@ class CategorizerData:
         if show:
             print('    added new font:', (fontId, pathRev, font_family, font_style, font_size, font_color, 1))
         return fontId
+
+    def findCatVariantIds(self, name, only_latest = False):
+        '''
+        Based on the sound of the name, search the categories and catVariants for matches.  
+        If the name is found in the categories, get the catId and find all the catVariants which have the catId and record the catVarId.
+        If the name is found in the catVariants, get the catId and find all the catVariants which have the catId and record the catVarId.
+        if only_latest is False, skip any catVarIds which do not exist with a latest flag.
+        return a tuple of catVarIds
+        '''
+        pass
     
     def _getMatchingRowIds(self, table_name, col_val_pairs, only_valid_for_latest = True):
         show = False

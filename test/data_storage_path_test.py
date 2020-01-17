@@ -28,7 +28,7 @@ EXPDATAA = {
 }
 class DataStoragePathTest(unittest.TestCase):
     runAll = True
-    runTestCounts = list(range(12))
+    runTestCounts = list(range(3))
     
     def test_00_instantiate(self):
         if not self.runAll:
@@ -483,6 +483,38 @@ class DataStoragePathTest(unittest.TestCase):
         self.compareTuples('nodeStyles', EXPDATAA['nodeStyles'], actNodeStyles, show)
         self.compareTuples('fonts', EXPDATAA['fonts'], actFonts, show)
 
+    def _test_20_findCatVariants(self):
+        '''
+        '''
+        if not self.runAll:
+            if 20 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_20_findCatVariants')
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        findNames = (
+            #name, onlyLatest
+            ('finds nothing', True), #finds nothing
+            ('pig', True),
+            ('pigs', False),
+        )
+        expCatVarIdss = (
+            (0,),
+            (3,6),
+            (3,6),
+        )
+        for (name, onlyLatest), expCatVarIds in zip(findNames, expCatVarIdss):
+            actCatVarIds = db.findCatVariantIds(name, onlyLatest)
+            if show:
+                print('  exp:', expCatVarIds, ', act:', actCatVarIds, end='')
+                if expCatVarIds != actCatVarIds:
+                    print('***********************ERROR*****************************')
+                else: print()
+            else:
+                self.assertEqual(expCatVarIds, actCatVarIds)
+                
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
             print('   ', tuplesName,':')
@@ -509,54 +541,6 @@ class DataStoragePathTest(unittest.TestCase):
             print('  got', showErrorCnt, 'ERRORS')
         else:
             self.assertEqual(tuple(expTuples), tuple(actTuples))
-
-    def _addExpCats(self, expCats):
-        for newExpCat in expCats:
-            expCatIdx = newExpCat[0]
-            if expCatIdx < len(EXPCATS):
-                EXPCATS[expCatIdx] = newExpCat
-            else:
-                EXPCATS.append(newExpCat)
-        
-    def _addExpCatVars(self, expCatVars):
-        for newExpCatVar in expCatVars:
-            expCatVarIdx = newExpCatVar[0]
-            if expCatVarIdx < len(EXPCATVARS):
-                EXPCATVARS[expCatVarIdx] = newExpCatVar
-            else:
-                EXPCATVARS.append(newExpCatVar)
-
-    def _addExpCatNodes(self, expCatNodes):
-        for newExpCatNode in expCatNodes:
-            expCatNodeIdx = newExpCatNode[0]
-            if expCatNodeIdx < len(EXPCATNODES):
-                EXPCATNODES[expCatNodeIdx] = newExpCatNode
-            else:
-                EXPCATNODES.append(newExpCatNode)
-        
-    def _addExpRels(self, expRels):
-        for newRel in expRels:
-            expRelIdx = newRel[0]
-            if expRelIdx < len(EXPRELS):
-                EXPRELS[expRelIdx] = newRel
-            else:
-                EXPRELS.append(newRel)
-        
-    def _addExpRelVars(self, expRelVars):
-        for newRelVar in expRelVars:
-            expRelVarIdx = newRelVar[0]
-            if expRelVarIdx < len(EXPRELVARS):
-                EXPRELVARS[expRelVarIdx] = newRelVar
-            else:
-                EXPRELVARS.append(newRelVar)
-        
-    def _addExpCatConns(self, expCatConns):
-        for newCatConn in expCatConns:
-            expCatConnIdx = newCatConn[0]
-            if expCatConnIdx < len(EXPCATCONNS):
-                EXPCATCONNS[expCatConnIdx] = newCatConn
-            else:
-                EXPCATCONNS.append(newCatConn)
 
     def _addExpDataa(self, name, dataa):
         for data in dataa:

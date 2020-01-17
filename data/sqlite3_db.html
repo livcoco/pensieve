@@ -11,7 +11,8 @@
 ><td align=right valign=bottom
 ><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/stuart/code/pensieve/data/sqlite3_db.py">/home/stuart/code/pensieve/data/sqlite3_db.py</a></font></td></tr></table>
     <p><tt>history:<br>
-2/3&nbsp;-&nbsp;<br>
+1/1/20&nbsp;-&nbsp;added&nbsp;Double&nbsp;Metaphone&nbsp;(improvement&nbsp;on&nbsp;Soundex)&nbsp;to&nbsp;my&nbsp;system&nbsp;from&nbsp;https://pypi.org/project/Fuzzy/<br>
+11/6&nbsp;-&nbsp;cleaned&nbsp;up&nbsp;editCatNode()<br>
 12/19&nbsp;-&nbsp;eliminate&nbsp;tableInits?<br>
 12/19/18&nbsp;-&nbsp;need&nbsp;to&nbsp;change&nbsp;categoryTable:preNodeId&nbsp;to&nbsp;preCatId</tt></p>
 <p>
@@ -21,10 +22,11 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
     
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="multiprocessing.html">multiprocessing</a><br>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="fuzzy.html">fuzzy</a><br>
+</td><td width="25%" valign=top><a href="multiprocessing.html">multiprocessing</a><br>
 </td><td width="25%" valign=top><a href="sqlite3.html">sqlite3</a><br>
 </td><td width="25%" valign=top><a href="time.html">time</a><br>
-</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+</td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
@@ -116,37 +118,98 @@ Concepts:<br>
 &nbsp;&nbsp;catConnection:&nbsp;A&nbsp;connection&nbsp;'is-a'&nbsp;relationVariant.&nbsp;&nbsp;It&nbsp;connects&nbsp;two&nbsp;catNodes.<br>
 &nbsp;&nbsp;pathRev:&nbsp;A&nbsp;pathRev&nbsp;identifies&nbsp;a&nbsp;set&nbsp;of&nbsp;catNodes&nbsp;and&nbsp;catConnections&nbsp;(path)&nbsp;at&nbsp;a&nbsp;specific&nbsp;time.&nbsp;&nbsp;If&nbsp;changes&nbsp;have&nbsp;been&nbsp;made&nbsp;to&nbsp;the&nbsp;catNodes&nbsp;or&nbsp;catConnections,&nbsp;when&nbsp;a&nbsp;note&nbsp;is&nbsp;taken,&nbsp;the&nbsp;pathRev&nbsp;will&nbsp;be&nbsp;'closed'.&nbsp;&nbsp;Next&nbsp;time&nbsp;a&nbsp;change&nbsp;is&nbsp;made&nbsp;to&nbsp;the&nbsp;path,&nbsp;a&nbsp;new&nbsp;pathRev&nbsp;will&nbsp;be&nbsp;used.&nbsp;&nbsp;This&nbsp;enables&nbsp;old&nbsp;notes&nbsp;to&nbsp;use&nbsp;old&nbsp;paths,&nbsp;eliminating&nbsp;the&nbsp;need&nbsp;to&nbsp;update&nbsp;all&nbsp;notes&nbsp;when&nbsp;a&nbsp;change&nbsp;is&nbsp;made&nbsp;to&nbsp;the&nbsp;path.<br>
 &nbsp;<br>
-schema:<br>
-&nbsp;&nbsp;categories&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catId,&nbsp;pathRev)<br>
-&nbsp;&nbsp;catVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catId&nbsp;INTEGER,&nbsp;catVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catVarId,&nbsp;pathRev)<br>
-&nbsp;&nbsp;catNodes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;catVarId&nbsp;INTEGER,&nbsp;dx&nbsp;INTEGER,&nbsp;dy&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeID,&nbsp;pathRev)<br>
-&nbsp;&nbsp;relations&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relPrefix&nbsp;BLOB,&nbsp;relName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relId,&nbsp;pathRev)<br>
-&nbsp;&nbsp;relVariants&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;relVarId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relId&nbsp;INTEGER,&nbsp;relVarName&nbsp;BLOB,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(relVarId,&nbsp;pathRev)<br>
-&nbsp;&nbsp;catConnections&nbsp;:&nbsp;catNodeId&nbsp;INTEGER,&nbsp;pathRev&nbsp;INTEGER,&nbsp;relVarId&nbsp;INTEGER,&nbsp;superCatNodeId&nbsp;INTEGER,&nbsp;validForLatest&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(catNodeId,&nbsp;pathRev,&nbsp;relVarId,&nbsp;superCatNodeId)<br>
-&nbsp;&nbsp;pathRevs&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;pathRev&nbsp;INTEGER,&nbsp;startDateTime&nbsp;BLOB,&nbsp;openForChange&nbsp;INTEGER,&nbsp;PRIMARY&nbsp;KEY&nbsp;(pathRev)<br>&nbsp;</tt></td></tr>
+for&nbsp;a&nbsp;more&nbsp;complete&nbsp;picture:<br>
+../../../IHMC\&nbsp;CmapTools/CmapTools&nbsp;&amp;<br>
+open&nbsp;pensieve_database_schema<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
 <dl><dt><a name="CategorizerData-__init__"><strong>__init__</strong></a>(self, database_path_and_file_name, lock, in_memory<font color="#909090">=False</font>, create_new_database<font color="#909090">=False</font>)</dt></dl>
 
-<dl><dt><a name="CategorizerData-addCatNode"><strong>addCatNode</strong></a>(self, cat_var_id<font color="#909090">=None</font>, cat_var_name<font color="#909090">=None</font>)</dt><dd><tt>Add&nbsp;a&nbsp;single&nbsp;new&nbsp;catNode&nbsp;with&nbsp;no&nbsp;connections.<br>
+<dl><dt><a name="CategorizerData-addCatNode"><strong>addCatNode</strong></a>(self, cat_var_id<font color="#909090">=None</font>, cat_var_name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>, dz<font color="#909090">=None</font>, nodeStyleId<font color="#909090">=0</font>)</dt><dd><tt>should&nbsp;the&nbsp;API&nbsp;enforce&nbsp;exclusive&nbsp;or?<br>
+Add&nbsp;a&nbsp;single&nbsp;new&nbsp;catNode&nbsp;with&nbsp;no&nbsp;connections.<br>
 Must&nbsp;have&nbsp;either&nbsp;cat_var_id&nbsp;or&nbsp;cat_var_name.<br>
 If&nbsp;cat_var_id&nbsp;is&nbsp;provided,&nbsp;will&nbsp;add&nbsp;a&nbsp;catNode&nbsp;with&nbsp;that&nbsp;catVarId.<br>
-If&nbsp;cat_var_name&nbsp;is&nbsp;provided,&nbsp;add&nbsp;a&nbsp;new&nbsp;category,&nbsp;catVariant,&nbsp;then&nbsp;add&nbsp;a&nbsp;catNode&nbsp;with&nbsp;the&nbsp;new&nbsp;catVarId.</tt></dd></dl>
+If&nbsp;cat_var_name&nbsp;is&nbsp;provided,&nbsp;add&nbsp;a&nbsp;new&nbsp;category,&nbsp;catVariant,&nbsp;then&nbsp;add&nbsp;a&nbsp;catNode&nbsp;with&nbsp;the&nbsp;new&nbsp;catVarId.<br>
+The&nbsp;application&nbsp;code&nbsp;should&nbsp;find&nbsp;the&nbsp;cat_var_id&nbsp;before&nbsp;calling&nbsp;this&nbsp;method.&nbsp;&nbsp;If&nbsp;it&nbsp;cannot&nbsp;find&nbsp;it,&nbsp;then&nbsp;call&nbsp;this&nbsp;method&nbsp;with&nbsp;a&nbsp;cat_var_name,&nbsp;and&nbsp;a&nbsp;new&nbsp;category&nbsp;and&nbsp;category&nbsp;variant&nbsp;will&nbsp;be&nbsp;created.</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-addConnection"><strong>addConnection</strong></a>(self, cat_node_id, super_cat_node_id, rel_var_id<font color="#909090">=None</font>, rel_var_name<font color="#909090">=None</font>, conn_style_id<font color="#909090">=None</font>)</dt><dd><tt>add&nbsp;a&nbsp;connection&nbsp;between&nbsp;two&nbsp;cat&nbsp;nodes.<br>
+if&nbsp;rel_var_id&nbsp;is&nbsp;specified,&nbsp;use&nbsp;it&nbsp;for&nbsp;the&nbsp;relation&nbsp;and&nbsp;ignore&nbsp;rel_var_name<br>
+if&nbsp;rel_var_id&nbsp;is&nbsp;not&nbsp;specified&nbsp;and&nbsp;rel_var_name&nbsp;is&nbsp;specified,&nbsp;look&nbsp;for&nbsp;the&nbsp;relation&nbsp;variant&nbsp;with&nbsp;that&nbsp;name.<br>
+&nbsp;&nbsp;if&nbsp;the&nbsp;relation&nbsp;variant&nbsp;is&nbsp;not&nbsp;found,&nbsp;make&nbsp;a&nbsp;new&nbsp;relation&nbsp;and&nbsp;relation&nbsp;variant<br>
+&nbsp;&nbsp;if&nbsp;the&nbsp;relation&nbsp;variant&nbsp;is&nbsp;found,&nbsp;get&nbsp;the&nbsp;relVarId&nbsp;and&nbsp;use&nbsp;it<br>
+if&nbsp;neither&nbsp;rel_var_id&nbsp;or&nbsp;rel_var_name&nbsp;is&nbsp;specified,&nbsp;use&nbsp;relation&nbsp;variant&nbsp;id&nbsp;0.<br>
+&nbsp;<br>
+After&nbsp;the&nbsp;connection&nbsp;is&nbsp;added,&nbsp;the&nbsp;dx,&nbsp;dy&nbsp;are&nbsp;determined&nbsp;by&nbsp;the&nbsp;GUI&nbsp;software&nbsp;and&nbsp;the&nbsp;<a href="#CategorizerData-editCatNode">editCatNode</a>()&nbsp;is&nbsp;called&nbsp;with&nbsp;the&nbsp;dx,&nbsp;dy&nbsp;values.</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-addNodeStyle"><strong>addNodeStyle</strong></a>(self, style_name, font_id<font color="#909090">=None</font>, font_family<font color="#909090">=None</font>, font_style<font color="#909090">=None</font>, font_size<font color="#909090">=None</font>, font_color<font color="#909090">=None</font>, background_color<font color="#909090">=None</font>, transparency<font color="#909090">=None</font>)</dt><dd><tt>add&nbsp;a&nbsp;new&nbsp;style&nbsp;for&nbsp;a&nbsp;node.&nbsp;&nbsp;If&nbsp;you&nbsp;wish&nbsp;to&nbsp;reuse&nbsp;an&nbsp;already&nbsp;existing&nbsp;font,&nbsp;you&nbsp;can&nbsp;specify&nbsp;it&nbsp;using&nbsp;its&nbsp;font_id&nbsp;which&nbsp;you&nbsp;can&nbsp;find&nbsp;using&nbsp;the&nbsp;findFont()&nbsp;method.<br>
+If&nbsp;you&nbsp;wish&nbsp;to&nbsp;specify&nbsp;a&nbsp;font,&nbsp;use&nbsp;font_family,&nbsp;font_style,&nbsp;font_size,&nbsp;font_color.&nbsp;&nbsp;If&nbsp;that&nbsp;font&nbsp;description&nbsp;already&nbsp;exists,&nbsp;its&nbsp;font_id&nbsp;will&nbsp;be&nbsp;found&nbsp;and&nbsp;used&nbsp;for&nbsp;this&nbsp;node&nbsp;style.<br>
+If&nbsp;no&nbsp;font&nbsp;information&nbsp;is&nbsp;specified,&nbsp;the&nbsp;default&nbsp;font&nbsp;will&nbsp;be&nbsp;used.<br>
+In&nbsp;addition&nbsp;to&nbsp;font,&nbsp;the&nbsp;background_color&nbsp;and&nbsp;transparency&nbsp;can&nbsp;be&nbsp;specified&nbsp;or&nbsp;left&nbsp;blank&nbsp;to&nbsp;use&nbsp;defaults.</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-addNotes"><strong>addNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED&nbsp;YET<br>
 add&nbsp;new&nbsp;notes&nbsp;to&nbsp;the&nbsp;database</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-dumpTable"><strong>dumpTable</strong></a>(self, table_name)</dt><dd><tt>returns&nbsp;all&nbsp;of&nbsp;the&nbsp;data&nbsp;in&nbsp;a&nbsp;table&nbsp;as&nbsp;a&nbsp;list&nbsp;of&nbsp;tuples</tt></dd></dl>
 
-<dl><dt><a name="CategorizerData-editCatNode"><strong>editCatNode</strong></a>(self, node_id, name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;or&nbsp;more&nbsp;of&nbsp;name,&nbsp;dx,&nbsp;dy</tt></dd></dl>
+<dl><dt><a name="CategorizerData-editCatNode"><strong>editCatNode</strong></a>(self, cat_node_id, cat_var_id<font color="#909090">=None</font>, cat_var_name<font color="#909090">=None</font>, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>, dz<font color="#909090">=None</font>, node_style_id<font color="#909090">=None</font>)</dt><dd><tt>Given&nbsp;a&nbsp;cat_node_id&nbsp;selected&nbsp;from&nbsp;the&nbsp;GUI,&nbsp;change&nbsp;one&nbsp;of&nbsp;more&nbsp;of;&nbsp;category&nbsp;variant&nbsp;id,&nbsp;dx,&nbsp;dy<br>
+Just&nbsp;like&nbsp;<a href="#CategorizerData-addCatNode">addCatNode</a>(),&nbsp;a&nbsp;new&nbsp;category&nbsp;can&nbsp;be&nbsp;created&nbsp;by&nbsp;passing&nbsp;a&nbsp;cat_var_name&nbsp;without&nbsp;a&nbsp;cat_var_id.<br>
+&nbsp;<br>
+if&nbsp;the&nbsp;pathRev&nbsp;of&nbsp;the&nbsp;catNode&nbsp;is&nbsp;current:<br>
+&nbsp;&nbsp;simply&nbsp;change&nbsp;the&nbsp;current&nbsp;catNode<br>
+&nbsp;<br>
+if&nbsp;the&nbsp;pathRev&nbsp;of&nbsp;the&nbsp;catNode&nbsp;is&nbsp;not&nbsp;current:<br>
+&nbsp;&nbsp;create&nbsp;a&nbsp;new&nbsp;catNode&nbsp;with&nbsp;the&nbsp;new&nbsp;pathRev&nbsp;and&nbsp;catVarId,&nbsp;cloning&nbsp;the&nbsp;rest&nbsp;of&nbsp;the&nbsp;data.<br>
+&nbsp;&nbsp;create&nbsp;new&nbsp;catConnections&nbsp;with&nbsp;the&nbsp;new&nbsp;catNodeId&nbsp;and&nbsp;pathRev,&nbsp;cloning&nbsp;the&nbsp;rest&nbsp;of&nbsp;the&nbsp;data.<br>
+&nbsp;&nbsp;mark&nbsp;the&nbsp;old&nbsp;catNode&nbsp;validForLatest&nbsp;=&nbsp;False<br>
+&nbsp;&nbsp;mark&nbsp;the&nbsp;old&nbsp;catConnections'&nbsp;validForLatest&nbsp;=&nbsp;False</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-editCatVariant"><strong>editCatVariant</strong></a>(self, cat_var_id, cat_var_name)</dt><dd><tt>Change&nbsp;the&nbsp;name&nbsp;of&nbsp;a&nbsp;category&nbsp;variant.&nbsp;&nbsp;This&nbsp;is&nbsp;typically&nbsp;a&nbsp;small&nbsp;change,&nbsp;like&nbsp;capitalization,&nbsp;plural,&nbsp;or&nbsp;a&nbsp;more&nbsp;general&nbsp;term.<br>
+It&nbsp;could&nbsp;also&nbsp;be&nbsp;a&nbsp;more&nbsp;specific&nbsp;term&nbsp;if&nbsp;the&nbsp;category&nbsp;variant&nbsp;is&nbsp;being&nbsp;split&nbsp;into&nbsp;two&nbsp;or&nbsp;more&nbsp;parts.&nbsp;&nbsp;Then&nbsp;the&nbsp;other&nbsp;category(ies)&nbsp;/&nbsp;catVariant(s)&nbsp;would&nbsp;be&nbsp;added&nbsp;with&nbsp;<a href="#CategorizerData-addCatNode">addCatNode</a>().</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-editCategory"><strong>editCategory</strong></a>(self, cat_id, cat_name)</dt><dd><tt>Change&nbsp;the&nbsp;name&nbsp;of&nbsp;a&nbsp;category.&nbsp;&nbsp;This&nbsp;is&nbsp;typically&nbsp;a&nbsp;small&nbsp;change,&nbsp;like&nbsp;capitalization,&nbsp;plural,&nbsp;or&nbsp;a&nbsp;more&nbsp;general&nbsp;term.<br>
+It&nbsp;could&nbsp;also&nbsp;be&nbsp;a&nbsp;more&nbsp;specific&nbsp;term&nbsp;if&nbsp;the&nbsp;category&nbsp;is&nbsp;being&nbsp;split&nbsp;into&nbsp;two&nbsp;or&nbsp;more&nbsp;parts.&nbsp;&nbsp;Then&nbsp;the&nbsp;other&nbsp;category(ies)&nbsp;would&nbsp;be&nbsp;added&nbsp;with&nbsp;<a href="#CategorizerData-addCatNode">addCatNode</a>().</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-editConnection"><strong>editConnection</strong></a>(self, cat_conn_id, cat_node_id<font color="#909090">=None</font>, super_cat_node_id<font color="#909090">=None</font>, rel_var_id<font color="#909090">=None</font>, rel_var_name<font color="#909090">=None</font>, conn_style_id<font color="#909090">=None</font>)</dt></dl>
 
 <dl><dt><a name="CategorizerData-findNotes"><strong>findNotes</strong></a>(self, table_name)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-getDMetaNames"><strong>getDMetaNames</strong></a>(self, name)</dt></dl>
 
 <dl><dt><a name="CategorizerData-getNote"><strong>getNote</strong></a>(self, table_name, row_id)</dt><dd><tt>not&nbsp;implemented</tt></dd></dl>
 
 <dl><dt><a name="CategorizerData-modifyNotes"><strong>modifyNotes</strong></a>(self, table_name, notes)</dt><dd><tt>NOT&nbsp;IMPLEMENTED<br>
 modify&nbsp;existing&nbsp;notes&nbsp;already&nbsp;in&nbsp;the&nbsp;database<br>
 not&nbsp;implemented</tt></dd></dl>
+
+<dl><dt><a name="CategorizerData-moveCatNode"><strong>moveCatNode</strong></a>(self, cat_node_id, dx<font color="#909090">=None</font>, dy<font color="#909090">=None</font>)</dt><dd><tt>provide&nbsp;a&nbsp;new&nbsp;location&nbsp;for&nbsp;the&nbsp;category&nbsp;node</tt></dd></dl>
+
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>columnSpecs</strong> = {'catConnections': 'catConnId INTEGER, pathRev INTEGER, catNodeId IN...rLatest INTEGER, PRIMARY KEY (catConnId, pathRev)', 'catNodes': 'catNodeId INTEGER, pathRev INTEGER, catVarId INT...rLatest INTEGER, PRIMARY KEY (catNodeID, pathRev)', 'catVariants': 'catVarId INTEGER, pathRev INTEGER, catId INTEGER...orLatest INTEGER, PRIMARY KEY (catVarId, pathRev)', 'categories': 'catId INTEGER, pathRev INTEGER, catName BLOB, dM...idForLatest INTEGER, PRIMARY KEY (catId, pathRev)', 'connectionStyles': 'connStyleId INTEGER, pathRev INTEGER, styleName ...atest INTEGER, PRIMARY KEY (connStyleId, pathRev)', 'fonts': 'fontID INTEGER, pathRev INTEGER, family BLOB, st...dForLatest INTEGER, PRIMARY KEY (fontID, pathRev)', 'nodeStyles': 'nodeStyleId INTEGER, pathRev INTEGER, styleName ...atest INTEGER, PRIMARY KEY (nodeStyleId, pathRev)', 'pathRevs': 'pathRev INTEGER, startDateTime BLOB, openForChange INTEGER, PRIMARY KEY (pathRev)', 'relVariants': 'relVarId INTEGER, pathRev INTEGER, relId INTEGER...orLatest INTEGER, PRIMARY KEY (relVarId, pathRev)', 'relations': 'relId INTEGER, pathRev INTEGER, relPrefix BLOB, ...idForLatest INTEGER, PRIMARY KEY (relId, pathRev)'}</dl>
+
+<dl><dt><strong>dMeta</strong> = &lt;fuzzy.DMetaphone object&gt;</dl>
+
+<dl><dt><strong>tableInits</strong> = {'catConnections': (0, 0, 0, 0, None, 0, 0), 'catNodes': (0, 0, 0, None, None, None, 0, 0), 'catVariants': (0, 0, 0, None, '', '', 0), 'categories': (0, 0, None, '', '', 0), 'connectionStyles': (0, 1, 'default', 0, None, 'arrow', 'black', 0, 1), 'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'black', 1), 'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'white', 0, 1), 'pathRevs': (1, 1579046743, 1), 'relVariants': (0, 0, 0, None, None, '', '', None, 0), 'relations': (0, 0, None, None, '', '', None, 0)}</dl>
+
+<dl><dt><strong>typeInt</strong> = &lt;type 'int'&gt;<dd><tt>int(x=0)&nbsp;-&gt;&nbsp;int&nbsp;or&nbsp;long<br>
+int(x,&nbsp;base=10)&nbsp;-&gt;&nbsp;int&nbsp;or&nbsp;long<br>
+&nbsp;<br>
+Convert&nbsp;a&nbsp;number&nbsp;or&nbsp;string&nbsp;to&nbsp;an&nbsp;integer,&nbsp;or&nbsp;return&nbsp;0&nbsp;if&nbsp;no&nbsp;arguments<br>
+are&nbsp;given.&nbsp;&nbsp;If&nbsp;x&nbsp;is&nbsp;floating&nbsp;point,&nbsp;the&nbsp;conversion&nbsp;truncates&nbsp;towards&nbsp;zero.<br>
+If&nbsp;x&nbsp;is&nbsp;outside&nbsp;the&nbsp;integer&nbsp;range,&nbsp;the&nbsp;function&nbsp;returns&nbsp;a&nbsp;long&nbsp;instead.<br>
+&nbsp;<br>
+If&nbsp;x&nbsp;is&nbsp;not&nbsp;a&nbsp;number&nbsp;or&nbsp;if&nbsp;base&nbsp;is&nbsp;given,&nbsp;then&nbsp;x&nbsp;must&nbsp;be&nbsp;a&nbsp;string&nbsp;or<br>
+Unicode&nbsp;object&nbsp;representing&nbsp;an&nbsp;integer&nbsp;literal&nbsp;in&nbsp;the&nbsp;given&nbsp;base.&nbsp;&nbsp;The<br>
+literal&nbsp;can&nbsp;be&nbsp;preceded&nbsp;by&nbsp;'+'&nbsp;or&nbsp;'-'&nbsp;and&nbsp;be&nbsp;surrounded&nbsp;by&nbsp;whitespace.<br>
+The&nbsp;base&nbsp;defaults&nbsp;to&nbsp;10.&nbsp;&nbsp;Valid&nbsp;bases&nbsp;are&nbsp;0&nbsp;and&nbsp;2-36.&nbsp;&nbsp;Base&nbsp;0&nbsp;means&nbsp;to<br>
+interpret&nbsp;the&nbsp;base&nbsp;from&nbsp;the&nbsp;string&nbsp;as&nbsp;an&nbsp;integer&nbsp;literal.<br>
+&gt;&gt;&gt;&nbsp;int('0b100',&nbsp;base=0)<br>
+4</tt></dl>
+
+<dl><dt><strong>typeStr</strong> = &lt;type 'str'&gt;<dd><tt>str(object='')&nbsp;-&gt;&nbsp;string<br>
+&nbsp;<br>
+Return&nbsp;a&nbsp;nice&nbsp;string&nbsp;representation&nbsp;of&nbsp;the&nbsp;object.<br>
+If&nbsp;the&nbsp;argument&nbsp;is&nbsp;a&nbsp;string,&nbsp;the&nbsp;return&nbsp;value&nbsp;is&nbsp;the&nbsp;same&nbsp;object.</tt></dl>
 
 </td></tr></table></td></tr></table>
 </body></html>
