@@ -12,9 +12,19 @@ history:
 import sqlite3
 import multiprocessing
 import time
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import fuzzy
 
+class CategorizerLanguage:
+    '''
+    This class contains language definitions to allow the view, control, model to communicate data types to each other
+    '''
+    FontSet = namedtuple('fontSet', 'family style size color')
+    LineSet = namedtuple('lineSet', 'type weight color')
+    HeadSet = namedtuple('headSet', 'type color')
+    def __init__(self):
+        pass
+    
 class CategorizerData:
     '''
     Reads and writes data to a set of tables which keep track of:
@@ -556,7 +566,8 @@ class CategorizerData:
             self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, catVarId, dx, dy, dz, nodeStyleId, 1))
         self.db.commit()
 
-    def addNodeStyle(self, style_name, font_id = None, font_family = None, font_style = None, font_size = None, font_color = None, background_color = None, transparency = None):
+#    def addNodeStyle(self, style_name, font_id = None, font_family = None, font_style = None, font_size = None, font_color = None, background_color = None, transparency = None):
+    def addNodeStyle(self, style_name, font_id = None, font_set = None, background_color = None, transparency = None):
         '''
         add a new style for a node.  If you wish to reuse an already existing font, you can specify it using its font_id which you can find using the findFont() method.
         If you wish to specify a font, use font_family, font_style, font_size, font_color.  If that font description already exists, its font_id will be found and used for this node style.
@@ -564,7 +575,8 @@ class CategorizerData:
         In addition to font, the background_color and transparency can be specified or left blank to use defaults.
         '''
         show = False
-        if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_family', font_family, ', font_style', font_style, ', font_size', font_size, ', font_color', font_color, ', background_color', background_color, ', transparency', transparency)
+#        if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_family', font_family, ', font_style', font_style, ', font_size', font_size, ', font_color', font_color, ', background_color', background_color, ', transparency', transparency)
+        if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_set', font_set, ', background_color', background_color, ', transparency', transparency)
         pathRev = self._getPathRev()
         cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['nodeStyles'][0] + ') FROM nodeStyles')
         (nodeStyleId,) = cursor.fetchone()
@@ -573,13 +585,14 @@ class CategorizerData:
 
         # if we do not have a font_id, and we have other font info, create a new font
         if font_id == None:
-            if not (font_family == None and font_style == None and font_size == None and font_color == None):
+#            if not (font_family == None and font_style == None and font_size == None and font_color == None):
+            if font_set and not (font_set.family == None and font_set.style == None and font_set.size == None and font_set.color == None):
                 # see if we have an exact match already in the fonts table
                 colValPairs = []
-                colValPairs.append( (self.columnNames['fonts'][2], font_family) )
-                colValPairs.append( (self.columnNames['fonts'][3], font_style) )
-                colValPairs.append( (self.columnNames['fonts'][4], font_size) )
-                colValPairs.append( (self.columnNames['fonts'][5], font_color) )
+                colValPairs.append( (self.columnNames['fonts'][2], font_set.family) )
+                colValPairs.append( (self.columnNames['fonts'][3], font_set.style) )
+                colValPairs.append( (self.columnNames['fonts'][4], font_set.size) )
+                colValPairs.append( (self.columnNames['fonts'][5], font_set.color) )
                 rowIds = self._getMatchingRowIds('fonts', colValPairs)
                 if rowIds:
                     if show: print('    found an exact match for the font description')
@@ -588,7 +601,7 @@ class CategorizerData:
                 else:
                     # create a new font
                     if show: print('   did not find a match for the font description, creating a new font')
-                    fontId = self._addFont(font_family, font_style, font_size, font_color)
+                    fontId = self._addFont(font_set.family, font_set.style, font_set.size, font_set.color)
             else:
                 fontId = 0
         else:

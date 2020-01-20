@@ -8,7 +8,7 @@ history
 '''
 import unittest
 import multiprocessing
-from context import CategorizerData
+from context import CategorizerData, CategorizerLanguage
 import shutil
 import fuzzy
 
@@ -29,6 +29,7 @@ EXPDATAA = {
 class DataStoragePathTest(unittest.TestCase):
     runAll = True
     runTestCounts = list(range(3))
+    fontSet = CategorizerLanguage.FontSet
     
     def test_00_instantiate(self):
         if not self.runAll:
@@ -473,8 +474,10 @@ class DataStoragePathTest(unittest.TestCase):
             (1, 1, 'Verdana', 'bold', 16, 'Black', 1),
         )
         for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStyles:
+            tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
             #                from       to              use one of these or neither
-            db.addNodeStyle(styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency)
+#            db.addNodeStyle(styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency)
+            db.addNodeStyle(styleName, fontId, tmpFontSet, backgroundColor, transparency)
         self._addExpDataa('nodeStyles', newNodeStyles)
         self._addExpDataa('fonts', newFonts)
         
