@@ -17,19 +17,24 @@ import fuzzy
 # as test are run, things are added and changed in the database,
 # and things are added and changed to the expect dataa
 EXPDATAA = {
-    'categories'    : [CategorizerData.tableInits['categories']],
-    'catVariants'   : [CategorizerData.tableInits['catVariants']],
-    'catNodes'      : [CategorizerData.tableInits['catNodes']],
-    'relations'     : [CategorizerData.tableInits['relations']],
-    'relVariants'   : [CategorizerData.tableInits['relVariants']],
-    'catConnections': [CategorizerData.tableInits['catConnections']],
-    'nodeStyles'    : [CategorizerData.tableInits['nodeStyles']],
-    'fonts'         : [CategorizerData.tableInits['fonts']],
+    'categories'      : [CategorizerData.tableInits['categories']],
+    'catVariants'     : [CategorizerData.tableInits['catVariants']],
+    'catNodes'        : [CategorizerData.tableInits['catNodes']],
+    'relations'       : [CategorizerData.tableInits['relations']],
+    'relVariants'     : [CategorizerData.tableInits['relVariants']],
+    'catConnections'  : [CategorizerData.tableInits['catConnections']],
+    'nodeStyles'      : [CategorizerData.tableInits['nodeStyles']],
+    'fonts'           : [CategorizerData.tableInits['fonts']],
+    'connectionStyles': [CategorizerData.tableInits['connectionStyles']],
+    'lines'           : [CategorizerData.tableInits['lines']],
+    'heads'           : [CategorizerData.tableInits['heads']],
 }
 class DataStoragePathTest(unittest.TestCase):
     runAll = True
     runTestCounts = list(range(3))
     fontSet = CategorizerLanguage.FontSet
+    lineSet = CategorizerLanguage.LineSet
+    headSet = CategorizerLanguage.HeadSet
     
     def test_00_instantiate(self):
         if not self.runAll:
@@ -457,9 +462,9 @@ class DataStoragePathTest(unittest.TestCase):
         addNodeStyles = (
             #styleName, fontId, fontfamily, fontStyle, fontSize, fontColor, backgroundColor, transparency
             ('typical'   , None,      None,   None, None,    None, None, None),
-            ('bigNBold'  , None, 'Verdana', 'bold',   16, 'Black', None, None), #make new font
+            ('bigNBold'  , None, 'Verdana', 'Bold',   16, 'Black', None, None), #make new font
             ('seeThroughRed', None,   None,   None, None,    None, 'Red', 50),
-            ('blueBigNBold', None,'Verdana', 'bold',   16, 'Black', 'Blue', 30), #get exising font from description
+            ('blueBigNBold', None,'Verdana', 'Bold',   16, 'Black', 'Blue', 30), #get exising font from description
             ('plainBold', 1,   None,   None, None,    None, 'Black', None), #use existing font by fontId
             )
         newNodeStyles = (
@@ -471,12 +476,11 @@ class DataStoragePathTest(unittest.TestCase):
             (5, 1, 'plainBold', 'PLNP', '', 1, 'Black', None, 1),
         )
         newFonts = (
-            (1, 1, 'Verdana', 'bold', 16, 'Black', 1),
+            (1, 1, 'Verdana', 'Bold', 16, 'Black', 1),
         )
         for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStyles:
             tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
             #                from       to              use one of these or neither
-#            db.addNodeStyle(styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency)
             db.addNodeStyle(styleName, fontId, tmpFontSet, backgroundColor, transparency)
         self._addExpDataa('nodeStyles', newNodeStyles)
         self._addExpDataa('fonts', newFonts)
@@ -485,6 +489,75 @@ class DataStoragePathTest(unittest.TestCase):
         actFonts = db.dumpTable('fonts')
         self.compareTuples('nodeStyles', EXPDATAA['nodeStyles'], actNodeStyles, show)
         self.compareTuples('fonts', EXPDATAA['fonts'], actFonts, show)
+
+    def test_13_addConnectionStyle(self):
+        '''
+        '''
+        if not self.runAll:
+            if 13 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_13_addConnectionStyle')
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        addConnectionStyles = (
+            #styleName,  , headId, headType, headColor
+            ('typical'   ,
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (None,      None,       None,     None,    None),
+             #lineId, lineType, lineWeight, lineColor
+             (None,      None,   None,         None),
+             #headId, headType, headSize, headColor
+             (None,     None,     None,     None),),
+            ('heavy',
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (None, 'Times New Roman', 'Bold', 14, 'Black'),
+             #lineId, lineType, lineWeight, lineColor
+             (None, 'Solid',   3,  'Black'),
+             #headId, headType, headSize, headColor
+             (None,  'Filled',  6, 'Black'),),
+            ('heavyVerdana',
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (1,      None,       None,     None,    None),
+             #lineId, lineType, lineWeight, lineColor
+             (1,      None,   None,         None),
+             #headId, headType, headSize, headColor
+             (1,     None,     None,     None),),
+        )
+        newConnectionStyles = (
+            #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgroundCXolor, transparency, validForLatest
+            (1, 1, 'typical', 'TPKL', '', 0, 0, 0, 1),
+            (2, 1, 'heavy', 'HF', '', 2, 1, 1, 1),
+            (3, 1, 'heavyVerdana', 'HFFR', '', 1, 1, 1, 1),
+        )
+        newFonts = (
+            (2, 1, 'Times New Roman', 'Bold', 14, 'Black', 1),
+        )
+        newLines = (
+            (1, 1, 'Solid', 3, 'Black', 1),
+            )
+        newHeads = (
+            (1, 1, 'Filled', 6, 'Black', 1),
+        )
+        for (styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in addConnectionStyles:
+            tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
+            tmpLineSet = self.lineSet(lineType, lineWeight, lineColor)
+            tmpHeadSet = self.headSet(headType, headSize, headColor) 
+           #                from       to              use one of these or neither
+            db.addConnectionStyle(styleName, fontId, tmpFontSet, lineId, tmpLineSet, headId, tmpHeadSet)
+        self._addExpDataa('connectionStyles', newConnectionStyles)
+        self._addExpDataa('fonts', newFonts)
+        self._addExpDataa('lines', newLines)
+        self._addExpDataa('heads', newHeads)
+        actConnectionStyles = db.dumpTable('connectionStyles')
+        actFonts = db.dumpTable('fonts')
+        actLines = db.dumpTable('lines')
+        actHeads = db.dumpTable('heads')
+        self.compareTuples('connectionStyles', EXPDATAA['connectionStyles'], actConnectionStyles, show)
+        self.compareTuples('fonts', EXPDATAA['fonts'], actFonts, show)
+        self.compareTuples('lines', EXPDATAA['lines'], actLines, show)
+        self.compareTuples('heads', EXPDATAA['heads'], actHeads, show)
 
     def _test_20_findCatVariants(self):
         '''

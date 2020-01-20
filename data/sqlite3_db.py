@@ -17,15 +17,15 @@ import fuzzy
 
 class CategorizerLanguage:
     '''
-    This class contains language definitions to allow the view, control, model to communicate data types to each other
+    This class contains language definitions to allow the view, control, model to communicate data to each other
     '''
     FontSet = namedtuple('fontSet', 'family style size color')
-    LineSet = namedtuple('lineSet', 'type weight color')
-    HeadSet = namedtuple('headSet', 'type color')
+    LineSet = namedtuple('lineSet', 'lineType weight color')
+    HeadSet = namedtuple('headSet', 'headType size color')
     def __init__(self):
         pass
     
-class CategorizerData:
+class CategorizerData(CategorizerLanguage):
     '''
     Reads and writes data to a set of tables which keep track of:
       notes and their categories
@@ -59,6 +59,8 @@ class CategorizerData:
         'fonts': 'fontID INTEGER, pathRev INTEGER, family BLOB, style BLOB, size INTEGER, color BLOB, validForLatest INTEGER, PRIMARY KEY (fontID, pathRev)',
         'nodeStyles': 'nodeStyleId INTEGER, pathRev INTEGER, styleName BLOB, dMetaName0 BLOB, dMetaName1 BLOB, fontID INTEGER, backgroundColor BLOB, transparency INTEGER, validForLatest INTEGER, PRIMARY KEY (nodeStyleId, pathRev)',
         'connectionStyles': 'connStyleId INTEGER, pathRev INTEGER, styleName BLOB, fontID INTEGER, headType BLOB, tailType BLOB, tailColor BLOB, transparency INTEGER, validForLatest INTEGER, PRIMARY KEY (connStyleId, pathRev)',
+        'lines': 'lineId INTEGER, pathRev INTEGER, lineType BLOB, weight INTEGER, color BLOB, validForLatest INTEGER, PRIMARY KEY (lineId, pathRev)',
+        'heads': 'headId INTEGER, pathRev INTEGER, headType BLOB, size INTEGER, color BLOB, validForLatest INTEGER, PRIMARY KEY (headId, pathRev)',
 #    'newIdeas': 'id INTEGER PRIMARY KEY AUTOINCREMENT, noteText BLOB, date BLOB, owner BLOB',
 #    'toDo'    : 'id INTEGER PRIMARY KEY AUTOINCREMENT, noteText BLOB, date BLOB, owner BLOB, completeByDate BLOB'
     }
@@ -80,6 +82,8 @@ class CategorizerData:
         'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'black', 1), #default comes from LibreOffice Calc
         'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'white', 0, 1),
         'connectionStyles': (0, 1, 'default', 0, None, 'arrow', 'black', 0, 1),
+        'lines': (0, 1, 'full', 2, 'black', 1),
+        'heads': (0, 1, 'solid', 4, 'black', 1),
     }
 
     typeInt = type(1)
@@ -566,7 +570,6 @@ class CategorizerData:
             self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, catVarId, dx, dy, dz, nodeStyleId, 1))
         self.db.commit()
 
-#    def addNodeStyle(self, style_name, font_id = None, font_family = None, font_style = None, font_size = None, font_color = None, background_color = None, transparency = None):
     def addNodeStyle(self, style_name, font_id = None, font_set = None, background_color = None, transparency = None):
         '''
         add a new style for a node.  If you wish to reuse an already existing font, you can specify it using its font_id which you can find using the findFont() method.
@@ -575,7 +578,6 @@ class CategorizerData:
         In addition to font, the background_color and transparency can be specified or left blank to use defaults.
         '''
         show = False
-#        if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_family', font_family, ', font_style', font_style, ', font_size', font_size, ', font_color', font_color, ', background_color', background_color, ', transparency', transparency)
         if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_set', font_set, ', background_color', background_color, ', transparency', transparency)
         pathRev = self._getPathRev()
         cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['nodeStyles'][0] + ') FROM nodeStyles')
@@ -585,25 +587,7 @@ class CategorizerData:
 
         # if we do not have a font_id, and we have other font info, create a new font
         if font_id == None:
-#            if not (font_family == None and font_style == None and font_size == None and font_color == None):
-            if font_set and not (font_set.family == None and font_set.style == None and font_set.size == None and font_set.color == None):
-                # see if we have an exact match already in the fonts table
-                colValPairs = []
-                colValPairs.append( (self.columnNames['fonts'][2], font_set.family) )
-                colValPairs.append( (self.columnNames['fonts'][3], font_set.style) )
-                colValPairs.append( (self.columnNames['fonts'][4], font_set.size) )
-                colValPairs.append( (self.columnNames['fonts'][5], font_set.color) )
-                rowIds = self._getMatchingRowIds('fonts', colValPairs)
-                if rowIds:
-                    if show: print('    found an exact match for the font description')
-                    # found an exact match, use that fontId
-                    fontId = rowIds[-1]
-                else:
-                    # create a new font
-                    if show: print('   did not find a match for the font description, creating a new font')
-                    fontId = self._addFont(font_set.family, font_set.style, font_set.size, font_set.color)
-            else:
-                fontId = 0
+            fontId = self._getSubTableRowId('fonts', font_set)
         else:
             fontId = font_id
         (dMetaName0, dMetaName1) = self.getDMetaNames(style_name)
@@ -611,22 +595,81 @@ class CategorizerData:
         self.db.commit()
         return nodeStyleId
 
-    def _addFont(self, font_family, font_style, font_size, font_color):
+    def addConnectionStyle(self, style_name, font_id = None, font_set = None, line_id = None, line_set = None, head_id = None, head_set = None):
+        '''
+        add a new style for a connection.
+          If you wish to reuse an already existing font, line, and/or head, you can specify it using its font_id, line_id, head_id which you can find using the findFont(), findLine(), findHead() methods.
+        If you wish to specify a font, line, and/or head, specify a FontSet, LineSet, HeadSet.  If that font, line, and/or head description already exists, its fontId, lineId, headId will be found and used for this connection style.
+        If no font, line, and/or head information is specified, the default font, line, and/or head will be used.
+        In addition to font, the background_color and transparency can be specified or left blank to use defaults.
+        '''
         show = False
-        if show: print('in _addFont() with font_family', font_family, ', font_style', font_style, ', font_size', font_size, ', font_color', font_color)
+        if show: print('in addConnectionStyle() with style_name', style_name, ', font_id', font_id, ', font_set', font_set, ', line_id', line_id, ', line_set', line_set, ', head_id', head_id, ', head_set', head_set)
+        pathRev = self._getPathRev()
+        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['connectionStyles'][0] + ') FROM connectionStyles')
+        (connectionStyleId,) = cursor.fetchone()
+        connectionStyleId += 1
+        if show: print('  connectionStyleId', connectionStyleId, ', pathRev', pathRev)
+
+        # if we do not have a font_id, and we have other font info, create a new font
+        if font_id == None:
+            fontId = self._getSubTableRowId('fonts', font_set)
+        else:
+            fontId = font_id
+        if line_id == None:
+            lineId = self._getSubTableRowId('lines', line_set)
+        else:
+            lineId = line_id
+        if head_id == None:
+            headId = self._getSubTableRowId('heads', head_set)
+        else:
+            headId = head_id
+            
+        (dMetaName0, dMetaName1) = self.getDMetaNames(style_name)
+        self.dbCursor.execute(self.sqlAdds['connectionStyles'], (connectionStyleId, pathRev, style_name, dMetaName0, dMetaName1, fontId, lineId, headId, 1))
+        self.db.commit()
+        return connectionStyleId
+
+    def _getSubTableRowId(self, sub_table_name, data_set):
+        show = False
+        if show: print('in _getSubTableRowId() with sub_table_name', sub_table_name, ', data_set', data_set)
+        data = data_set[0:]
+        if data_set and data.count(None) < len(data):
+            # see if we have an exact match already in the fonts table
+            colValPairs = []
+            for colName, datum in zip(self.columnNames[sub_table_name][2:2+len(data)], data):
+                colValPairs.append( (colName, datum) )
+            rowIds = self._getMatchingRowIds(sub_table_name, colValPairs)
+            if rowIds:
+                if show: print('    found an exact match for the data_set')
+                # found an exact match, use that fontId
+                rowId = rowIds[-1]
+            else:
+                # create a new row for the data_set
+                if show: print('   did not find a match for the data, creating a new row for the data_set')
+                rowId = self._addSubTableRow(sub_table_name, data_set)
+        else:
+            rowId = 0
+        return rowId
+        
+    def _addSubTableRow(self, sub_table_name, data_set):
+        '''
+        add a row to a subTable, e.g. fonts, lines, heads
+        '''
+        show = False
+        if show: print('in _addSubTableRow() with data_set', data_set)
 
         pathRev = self._getPathRev()
 
-        # get the next fontId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['fonts'][0] + ') FROM fonts')
-        (fontId,) = cursor.fetchone()
-        fontId += 1
-        if show: print('  fontId', fontId, ', pathRev', pathRev)
-
-        self.dbCursor.execute(self.sqlAdds['fonts'], (fontId, pathRev, font_family, font_style, font_size, font_color, 1))
+        # get the next rowId
+        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames[sub_table_name][0] + ') FROM ' + sub_table_name)
+        (rowId,) = cursor.fetchone()
+        rowId += 1
+        if show: print('  rowId', rowId, ', pathRev', pathRev)
+        self.dbCursor.execute(self.sqlAdds[sub_table_name], (rowId, pathRev) + data_set[0:] + (1,) )
         if show:
-            print('    added new font:', (fontId, pathRev, font_family, font_style, font_size, font_color, 1))
-        return fontId
+            print('    added new line:', (rowId, pathRev, data_set[0:], 1))
+        return rowId
 
     def findCatVariantIds(self, name, only_latest = False):
         '''
