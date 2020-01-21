@@ -559,7 +559,7 @@ class DataStoragePathTest(unittest.TestCase):
         self.compareTuples('lines', EXPDATAA['lines'], actLines, show)
         self.compareTuples('heads', EXPDATAA['heads'], actHeads, show)
 
-    def _test_20_findCatVariants(self):
+    def test_20_findCatVariants(self):
         '''
         '''
         if not self.runAll:
@@ -573,14 +573,23 @@ class DataStoragePathTest(unittest.TestCase):
         findNames = (
             #name, onlyLatest
             ('finds nothing', True), #finds nothing
-            ('pig', True),
-            ('pigs', False),
+            ('horses', True), #find name in categories, then find catVariant
+            ('pigs', True),
+            ('Dogs', True),
         )
         expCatVarIdss = (
             (0,),
-            (3,6),
-            (3,6),
+            (2, 5),
+            (3, 6),
+            (4, 7),
         )
+        if show:
+            print('  categories table content:')
+            for row in db.dumpTable('categories'):
+                print('   ', row)
+            print('  catVariants table content:')
+            for row in db.dumpTable('catVariants'):
+                print('   ', row)
         for (name, onlyLatest), expCatVarIds in zip(findNames, expCatVarIdss):
             actCatVarIds = db.findCatVariantIds(name, onlyLatest)
             if show:

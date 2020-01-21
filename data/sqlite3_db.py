@@ -22,6 +22,7 @@ class CategorizerLanguage:
     FontSet = namedtuple('fontSet', 'family style size color')
     LineSet = namedtuple('lineSet', 'lineType weight color')
     HeadSet = namedtuple('headSet', 'headType size color')
+    
     def __init__(self):
         pass
     
@@ -79,11 +80,11 @@ class CategorizerData(CategorizerLanguage):
         #catConnId*, pathRev*, catNodeId, relVarId, superCatNodeId, connStyleId, validForLatest
         'catConnections' : (0, 0, 0, 0, None, 0, 0),
         'pathRevs': (1, int(time.time()), 1),
-        'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'black', 1), #default comes from LibreOffice Calc
-        'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'white', 0, 1),
-        'connectionStyles': (0, 1, 'default', 0, None, 'arrow', 'black', 0, 1),
-        'lines': (0, 1, 'full', 2, 'black', 1),
-        'heads': (0, 1, 'solid', 4, 'black', 1),
+        'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'Black', 1), #default comes from LibreOffice Calc
+        'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'White', 0, 1),
+        'connectionStyles': (0, 1, 'default', 0, None, 'arrow', 'Black', 0, 1),
+        'lines': (0, 1, 'Solid', 2, 'Black', 1),
+        'heads': (0, 1, 'Filled', 4, 'Black', 1),
     }
 
     typeInt = type(1)
@@ -671,7 +672,7 @@ class CategorizerData(CategorizerLanguage):
             print('    added new line:', (rowId, pathRev, data_set[0:], 1))
         return rowId
 
-    def findCatVariantIds(self, name, only_latest = False):
+    def findCatVariantIds(self, name, only_latest = True):
         '''
         Based on the sound of the name, search the categories and catVariants for matches.  
         If the name is found in the categories, get the catId and find all the catVariants which have the catId and record the catVarId.
@@ -679,7 +680,52 @@ class CategorizerData(CategorizerLanguage):
         if only_latest is False, skip any catVarIds which do not exist with a latest flag.
         return a tuple of catVarIds
         '''
-        pass
+        show = False
+        if show: print('in findCatVariantIds() with name', name, ', only_latest', only_latest)
+        dMetaNames = self.getDMetaNames(name)
+        if dMetaNames[1] == '':
+            dMetaNames = (dMetaNames[0],)
+        dMetaNamesStr = '("' + '", "'.join(dMetaNames) + '")'
+        if show: print('  dMetaNames', dMetaNames, ', dMetaNamesStr', dMetaNamesStr)
+
+        catVarIds = []
+        catVarIdsCatIds = []
+        # find the catVarId and catId for matches in catVariants
+        sqlBegin = f'SELECT {self.columnNames["catVariants"][0]} {self.columnNames["catVariants"][2]} FROM catVariants WHERE '
+        sqlEnd = f' IN {dMetaNamesStr}'
+        for sqlMid in (self.columnNames['catVariants'][4], self.columnNames['catVariants'][5]):
+            if show: print('  sql:', sqlBegin + sqlMid + sqlEnd)
+            cursor = self.dbCursor.execute(sqlBegin + sqlMid + sqlEnd)
+            catVarIdsCatIds += cursor.fetchall()
+        catVarIds = [catVarIdsCatIds[x][0] for x in range(len(catVarIdsCatIds))]
+        catIdsA = [catVarIdsCatIds[x][1] for x in range(len(catVarIdsCatIds))]
+        if show: print('  catVariant catVarIds', catVarIds, ', catIdsA', catIdsA)
+
+        # find the matches in categories, then find the categories catVarIds in catVariants
+        catIdsB = []
+        sqlBegin = 'SELECT ' + self.columnNames['categories'][0] + ' FROM categories WHERE '
+        sqlEnd = ' IN ' + dMetaNamesStr
+        for sqlMid in (self.columnNames['categories'][3], self.columnNames['categories'][4]):
+            if show: print('  sql:', sqlBegin + sqlMid + sqlEnd)
+            cursor = self.dbCursor.execute(sqlBegin + sqlMid + sqlEnd)
+            catIdsB += cursor.fetchall()
+        catIds = catIdsA + [catIdsB[x][0] for x in range(len(catIdsB))]
+        catIdsStr = str(tuple(catIds))
+        if len(catIds) == 1:
+            # get rid of the trailing comma because
+            catIdsStr = catIdsStr[0:len(catIdsStr)-2] + ')'
+        if show: print('  categories catIdsStr', catIdsStr)
+
+        # find the categories catVarIds in catVariants
+        sql = 'SELECT ' + self.columnNames['catVariants'][0] + ' FROM catVariants WHERE ' + self.columnNames['catVariants'][2] + ' IN ' + catIdsStr
+        if show: print('  find categories catVarIds in catVariants sql:', sql)
+        cursor = self.dbCursor.execute(sql)
+        tmpRowIds = cursor.fetchall()
+        catVarIds +=  [tmpRowIds[x][0] for x in range(len(tmpRowIds))]
+        if show: print('  categories and catVariant catVarIds', catVarIds)
+        if len(catVarIds) == 0:
+            catVarIds = (0,)
+        return tuple(catVarIds)
     
     def _getMatchingRowIds(self, table_name, col_val_pairs, only_valid_for_latest = True):
         show = False
