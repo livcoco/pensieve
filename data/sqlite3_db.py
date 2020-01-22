@@ -68,17 +68,17 @@ class CategorizerData(CategorizerLanguage):
 
     tableInits = {
         #             catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
-        'categories'   : (0,       0,    None,         '',         '',              0),
+        'categories'   : (0,       0,    None,         '',         '',            0),
         #              VarId, pathRev, catId, catName, dMetaName0, dMetaName1, validForLatest
-        'catVariants'   : (0,       0,     0,    None,         '',         '',              0),
+        'catVariants'   : (0,       0,     0,    None,         '',         '',            0),
         #       catNodeId, pathRev, catVarId,   dx,   dy,   dz, nodeStyleId, validForLatest
-        'catNodes'   : (0,       0,        0, None, None, None,           0,              0),
+        'catNodes'   : (0,       0,        0, None, None, None,           0,            0),
         #          relId*, pathRev*, prefix, relName, dMetaName0, dMetaName1, direction, validForLatest
-        'relations'  : (0,        0,   None,    None,         '',         '',      None,              0),
+        'relations'  : (0,        0,   None,    None,         '',         '',      None,            0),
         #relVarId*, pathRev*, relId, relVarPrefix, relVarName, dMetaName0, dMetaName1, varDirection, validForLatest
-        'relVariants'  : (0,        0,     0,         None,       None,         '',         '',         None,              0),
+        'relVariants'  : (0, 0,   0,         None,       None,         '',         '',         None,            0),
         #catConnId*, pathRev*, catNodeId, relVarId, superCatNodeId, connStyleId, validForLatest
-        'catConnections' : (0, 0, 0, 0, None, 0, 0),
+        'catConnections' : (0, 0,      0,        0,           None,           0,            0),
         'pathRevs': (1, int(time.time()), 1),
         'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'Black', 1), #default comes from LibreOffice Calc
         'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'White', 0, 1),
@@ -179,6 +179,82 @@ class CategorizerData(CategorizerLanguage):
             print('ERROR must provide either cat_var_id or cat_var_name')
             assert False
         return catNodeId
+
+    def editCatNode(self, cat_node_id, cat_var_id = None, cat_var_name = None, dx = None, dy = None, dz = None, node_style_id = None):
+        '''
+        Given a cat_node_id selected from the GUI, change one of more of; category variant id, dx, dy
+        Just like addCatNode(), a new category can be created by passing a cat_var_name without a cat_var_id.
+
+        if the pathRev of the catNode is current:
+          simply change the current catNode
+
+        if the pathRev of the catNode is not current:
+          create a new catNode with the new pathRev and catVarId, cloning the rest of the data.
+          create new catConnections with the new catNodeId and pathRev, cloning the rest of the data.
+          mark the old catNode validForLatest = False
+          mark the old catConnections' validForLatest = False
+        '''
+        show = False
+        if show: print('in editCatNode() with cat_node_id', cat_node_id, ', cat_var_id', cat_var_id, ', dx', dx, ', dy', dy, ', dz', dz, 'node_style_id', node_style_id)
+        if cat_var_id == None and dx == None and dy == None and dz == None and node_style_id == None:
+            return
+
+        # just like addCatNode, we can create a new category by passing a name without a cat_var_id
+        if not cat_var_id and cat_var_name:
+            cat_var_id = self._addCategory(cat_var_name)
+            
+        # get the latest pathRev
+        pathRev = self._getPathRev()
+
+        # get the path rev of the latest version of this catNode and the corresponding sql WHERE statement
+        (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('catNodes', cat_node_id) 
+
+        if rowPathRev == pathRev:
+            # The pathRevs are the same, so we can just change the existing tuple with what we need to change
+            if show: print('    rowPathRev == pathRev, updating data:')
+            colValPairs = []
+            if cat_var_id != None:
+                colValPairs.append( (self.columnNames['catNodes'][2], cat_var_id) )
+            if dx != None:
+                colValPairs.append( (self.columnNames['catNodes'][3], dx) )
+            if dy != None:
+                colValPairs.append( (self.columnNames['catNodes'][4], dy) )
+            if dz != None:
+                colValPairs.append( (self.columnNames['catNodes'][5], dz) )
+            if node_style_id != None:
+                colValPairs.append( (self.columnNames['catNodes'][6], node_style_id) )
+            if show: print('  colValPairs', colValPairs)
+            self._editRow('catNodes', colValPairs, sqlWhere)
+        else:
+            # The pathRevs are not the same, so we need to make a new tuple in the database
+            if show: print('    rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
+            # get all the existing values from the current row
+            (catNodeIdName, pathRevName, catVarIdName, dxName, dyName, dzName, nodeStyleIdName) = self.columnNames['catNodes'][:7]
+            sql = 'SELECT ({cni}, {pr}, {cvi}, {dx}, {dy}, {dz} {nsID} FROM catNodes '.format(cni=catNodeIdName, pr=pathRevName, cvi=catVarIdName, dx=dxName, dy=dyName, dz=dzName, nsID=nodeStyleIDName) + sqlWhere
+            cursor = self.dbCursor.execute(sql)
+            (catNodeId, rowPathRev, oldCatVarId, oldDx, oldDy, oldDz, oldNodeStyleId) = cursor.fetchone()
+
+            # set validForLatest of the old one to 0
+            columnName, value = self.columnNames['catNodes'][-1], 0
+            sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
+            if show: print('      updating validForLatest: sql = \"', sql, '\"')
+            self.dbCursor.execute(sql)
+
+            # create a new version of the catNode which is a new row in the table.  We change one of the primary keys: pathRev
+            if cat_var_id == None:
+                catVarId = oldCatVarId
+            else:
+                catVarId = cat_var_id
+            if dx == None:
+                dx = oldDx
+            if dy == None:
+                dy = oldDy
+            if dz == None:
+                dz = oldDz
+            if node_style_id == None:
+                nodeStyleId = oldNodeStyleId
+            self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, catVarId, dx, dy, dz, nodeStyleId, 1))
+        self.db.commit()
 
     def addConnection(self, cat_node_id, super_cat_node_id, rel_var_id = None, rel_var_name = None, conn_style_id = None):
         '''
@@ -428,7 +504,7 @@ class CategorizerData(CategorizerLanguage):
         self.db.commit()
         return relVarId
 
-    def getDMetaNames(self, name):
+    def getDMetaNames(self, name, skip_blanks = False):
         if name == None:
             dMetaName0 = ''
             dMetaName1 = ''
@@ -439,6 +515,9 @@ class CategorizerData(CategorizerLanguage):
                 dMetaName1 = ''
             else:
                 dMetaName1 = dMetaNames[1].decode()
+        if skip_blanks == True:
+            if dMetaName1 == '':
+                return (dMetaName0,)
         return (dMetaName0, dMetaName1)
     
     def editCategory(self, cat_id, cat_name):
@@ -495,82 +574,6 @@ class CategorizerData(CategorizerLanguage):
             self.dbCursor.execute(self.sqlAdds['catVariants'], (cat_var_id, pathRev, cat_var_name, dMetaName0, dMetaName1, 1))
         self.db.commit()
         
-    def editCatNode(self, cat_node_id, cat_var_id = None, cat_var_name = None, dx = None, dy = None, dz = None, node_style_id = None):
-        '''
-        Given a cat_node_id selected from the GUI, change one of more of; category variant id, dx, dy
-        Just like addCatNode(), a new category can be created by passing a cat_var_name without a cat_var_id.
-
-        if the pathRev of the catNode is current:
-          simply change the current catNode
-
-        if the pathRev of the catNode is not current:
-          create a new catNode with the new pathRev and catVarId, cloning the rest of the data.
-          create new catConnections with the new catNodeId and pathRev, cloning the rest of the data.
-          mark the old catNode validForLatest = False
-          mark the old catConnections' validForLatest = False
-        '''
-        show = False
-        if show: print('in editCatNode() with cat_node_id', cat_node_id, ', cat_var_id', cat_var_id, ', dx', dx, ', dy', dy, ', dz', dz, 'node_style_id', node_style_id)
-        if cat_var_id == None and dx == None and dy == None and dz == None and node_style_id == None:
-            return
-
-        # just like addCatNode, we can create a new category by passing a name without a cat_var_id
-        if not cat_var_id and cat_var_name:
-            cat_var_id = self._addCategory(cat_var_name)
-            
-        # get the latest pathRev
-        pathRev = self._getPathRev()
-
-        # get the path rev of the latest version of this catNode and the corresponding sql WHERE statement
-        (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('catNodes', cat_node_id) 
-
-        if rowPathRev == pathRev:
-            # The pathRevs are the same, so we can just change the existing tuple with what we need to change
-            if show: print('    rowPathRev == pathRev, updating data:')
-            colValPairs = []
-            if cat_var_id != None:
-                colValPairs.append( (self.columnNames['catNodes'][2], cat_var_id) )
-            if dx != None:
-                colValPairs.append( (self.columnNames['catNodes'][3], dx) )
-            if dy != None:
-                colValPairs.append( (self.columnNames['catNodes'][4], dy) )
-            if dz != None:
-                colValPairs.append( (self.columnNames['catNodes'][5], dz) )
-            if node_style_id != None:
-                colValPairs.append( (self.columnNames['catNodes'][6], node_style_id) )
-            if show: print('  colValPairs', colValPairs)
-            self._editRow('catNodes', colValPairs, sqlWhere)
-        else:
-            # The pathRevs are not the same, so we need to make a new tuple in the database
-            if show: print('    rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
-            # get all the existing values from the current row
-            (catNodeIdName, pathRevName, catVarIdName, dxName, dyName, dzName, nodeStyleIdName) = self.columnNames['catNodes'][:7]
-            sql = 'SELECT ({cni}, {pr}, {cvi}, {dx}, {dy}, {dz} {nsID} FROM catNodes '.format(cni=catNodeIdName, pr=pathRevName, cvi=catVarIdName, dx=dxName, dy=dyName, dz=dzName, nsID=nodeStyleIDName) + sqlWhere
-            cursor = self.dbCursor.execute(sql)
-            (catNodeId, rowPathRev, oldCatVarId, oldDx, oldDy, oldDz, oldNodeStyleId) = cursor.fetchone()
-
-            # set validForLatest of the old one to 0
-            columnName, value = self.columnNames['catNodes'][-1], 0
-            sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
-            if show: print('      updating validForLatest: sql = \"', sql, '\"')
-            self.dbCursor.execute(sql)
-
-            # create a new version of the catNode which is a new row in the table.  We change one of the primary keys: pathRev
-            if cat_var_id == None:
-                catVarId = oldCatVarId
-            else:
-                catVarId = cat_var_id
-            if dx == None:
-                dx = oldDx
-            if dy == None:
-                dy = oldDy
-            if dz == None:
-                dz = oldDz
-            if node_style_id == None:
-                nodeStyleId = oldNodeStyleId
-            self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, catVarId, dx, dy, dz, nodeStyleId, 1))
-        self.db.commit()
-
     def addNodeStyle(self, style_name, font_id = None, font_set = None, background_color = None, transparency = None):
         '''
         add a new style for a node.  If you wish to reuse an already existing font, you can specify it using its font_id which you can find using the findFont() method.
@@ -672,6 +675,34 @@ class CategorizerData(CategorizerLanguage):
             print('    added new line:', (rowId, pathRev, data_set[0:], 1))
         return rowId
 
+    def findCategoryIds(self, name, only_latest = True):
+        '''
+        Based on the sound of the name, search the categories for matches.
+        return all the catIds of all name matches
+        if only_latest is True, only return those which are valid for latest, else return them all
+        '''
+        show = False
+        if show: print(f'in findCategoryIds() with name {name}, and only_latest {only_latest}')
+        skipBlanks = True
+        dMetaNames = self.getDMetaNames(name, skipBlanks)
+        dMetaNamesStr = '("' + '", "'.join(dMetaNames) + '")'
+        if show: print('  dMetaNames', dMetaNames, ', dMetaNamesStr', dMetaNamesStr)
+
+        # find the matches in categories, then find the categories catVarIds in catVariants
+        catIds = []
+        sqlBegin = 'SELECT ' + self.columnNames['categories'][0] + ' FROM categories WHERE '
+        sqlEnd = ' IN ' + dMetaNamesStr
+        if only_latest:
+            sqlEnd += f' AND {self.columnNames["categories"][-1]} = 1'
+        for sqlMid in (self.columnNames['categories'][3], self.columnNames['categories'][4]):
+            if show: print('  sql:', sqlBegin + sqlMid + sqlEnd)
+            cursor = self.dbCursor.execute(sqlBegin + sqlMid + sqlEnd)
+            catIds += cursor.fetchall()
+        catIds = [catIds[x][0] for x in range(len(catIds))]
+        if len(catIds) == 0:
+            catIds = (0,)
+        return tuple(catIds)
+
     def findCatVariantIds(self, name, only_latest = True):
         '''
         Based on the sound of the name, search the categories and catVariants for matches.  
@@ -693,6 +724,8 @@ class CategorizerData(CategorizerLanguage):
         # find the catVarId and catId for matches in catVariants
         sqlBegin = f'SELECT {self.columnNames["catVariants"][0]} {self.columnNames["catVariants"][2]} FROM catVariants WHERE '
         sqlEnd = f' IN {dMetaNamesStr}'
+        if only_latest:
+            sqlEnd += f' AND {self.columnNames["catVariants"][-1]} = 1'
         for sqlMid in (self.columnNames['catVariants'][4], self.columnNames['catVariants'][5]):
             if show: print('  sql:', sqlBegin + sqlMid + sqlEnd)
             cursor = self.dbCursor.execute(sqlBegin + sqlMid + sqlEnd)
@@ -702,31 +735,26 @@ class CategorizerData(CategorizerLanguage):
         if show: print('  catVariant catVarIds', catVarIds, ', catIdsA', catIdsA)
 
         # find the matches in categories, then find the categories catVarIds in catVariants
-        catIdsB = []
-        sqlBegin = 'SELECT ' + self.columnNames['categories'][0] + ' FROM categories WHERE '
-        sqlEnd = ' IN ' + dMetaNamesStr
-        for sqlMid in (self.columnNames['categories'][3], self.columnNames['categories'][4]):
-            if show: print('  sql:', sqlBegin + sqlMid + sqlEnd)
-            cursor = self.dbCursor.execute(sqlBegin + sqlMid + sqlEnd)
-            catIdsB += cursor.fetchall()
-        catIds = catIdsA + [catIdsB[x][0] for x in range(len(catIdsB))]
-        catIdsStr = str(tuple(catIds))
+        catIds = tuple(catIdsA) + self.findCategoryIds(name, only_latest)
+        catIdsStr = str(catIds)
         if len(catIds) == 1:
             # get rid of the trailing comma because
             catIdsStr = catIdsStr[0:len(catIdsStr)-2] + ')'
         if show: print('  categories catIdsStr', catIdsStr)
 
         # find the categories catVarIds in catVariants
-        sql = 'SELECT ' + self.columnNames['catVariants'][0] + ' FROM catVariants WHERE ' + self.columnNames['catVariants'][2] + ' IN ' + catIdsStr
+        sql = f'SELECT {self.columnNames["catVariants"][0]} FROM catVariants WHERE {self.columnNames["catVariants"][2]} IN {catIdsStr}'
+        if only_latest:
+            sql += f' AND {self.columnNames["catVariants"][-1]} = 1'
         if show: print('  find categories catVarIds in catVariants sql:', sql)
         cursor = self.dbCursor.execute(sql)
         tmpRowIds = cursor.fetchall()
-        catVarIds +=  [tmpRowIds[x][0] for x in range(len(tmpRowIds))]
+        catVarIds += [tmpRowIds[x][0] for x in range(len(tmpRowIds))]
         if show: print('  categories and catVariant catVarIds', catVarIds)
         if len(catVarIds) == 0:
             catVarIds = (0,)
         return tuple(catVarIds)
-    
+
     def _getMatchingRowIds(self, table_name, col_val_pairs, only_valid_for_latest = True):
         show = False
         if show: print('in _getMatchingRowIds() with table_name', table_name, ', col_val_pairs', col_val_pairs, ', only_valid_for_latest', only_valid_for_latest)
@@ -749,7 +777,7 @@ class CategorizerData(CategorizerLanguage):
         except sqlite3.OperationalError as e:
             if show: print('  row not found, returning')
             return tuple()
-        
+
         rowIds = []
         while True:
             data = cursor.fetchone()
@@ -758,7 +786,7 @@ class CategorizerData(CategorizerLanguage):
             else:
                 break
         return tuple(rowIds)
-    
+
     def _getRowPathRevAndSQLWhere(self, table_name, row_id):
         '''
         the 1st column of all tables must be an id
@@ -786,11 +814,11 @@ class CategorizerData(CategorizerLanguage):
         if show: print('  updating row with sql = \"', sql, '\"')
         self.dbCursor.execute(sql)
 
-    def moveCatNode(self, cat_node_id, dx = None, dy = None):
-        '''
-        provide a new location for the category node
-        '''
-        pass
+#    def moveCatNode(self, cat_node_id, dx = None, dy = None):
+#        '''
+#        provide a new location for the category node
+#        '''
+#        pass
 
     def dumpTable(self, table_name):
         '''
@@ -798,13 +826,8 @@ class CategorizerData(CategorizerLanguage):
         '''
         dataTuples = []
         cursor = self.dbCursor.execute(self.sqlDumps[table_name])
-        while True:
-            dataTuple = cursor.fetchone()
-            if dataTuple:
-                dataTuples.append(dataTuple)
-            else:
-                break
-        return tuple(dataTuples)
+        dataTuples = cursor.fetchall()
+        return dataTuples
 
     def _addTable(self, table_name):
         show = False

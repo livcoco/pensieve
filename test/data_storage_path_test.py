@@ -559,14 +559,52 @@ class DataStoragePathTest(unittest.TestCase):
         self.compareTuples('lines', EXPDATAA['lines'], actLines, show)
         self.compareTuples('heads', EXPDATAA['heads'], actHeads, show)
 
-    def test_20_findCatVariants(self):
+    def test_20_findCategoryIds(self):
         '''
         '''
         if not self.runAll:
             if 20 not in self.runTestCounts:
                 return
         show = False
-        print('  test_20_findCatVariants')
+        print('  test_20_findCategoryIds')
+        path = './test.db'
+        lock = multiprocessing.Lock()
+        db = CategorizerData(path, lock)
+        findNames = (
+            #name, onlyLatest
+            ('finds nothing', True), #finds nothing
+            ('horses', True), #find name in categories
+            ('pigs', True),
+            ('Dogs', True),
+        )
+        expCatIdss = (
+            (0,),
+            (2,),
+            (3,),
+            (4,),
+        )
+        if show:
+            print('  categories table content:')
+            for row in db.dumpTable('categories'):
+                print('   ', row)
+        for (name, onlyLatest), expCatIds in zip(findNames, expCatIdss):
+            actCatIds = db.findCategoryIds(name, onlyLatest)
+            if show:
+                print('  exp:', expCatIds, ', act:', actCatIds, end='')
+                if expCatIds != actCatIds:
+                    print('***********************ERROR*****************************')
+                else: print()
+            else:
+                self.assertEqual(expCatIds, actCatIds)
+                
+    def test_21_findCatVariantIds(self):
+        '''
+        '''
+        if not self.runAll:
+            if 21 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_21_findCatVariantIds')
         path = './test.db'
         lock = multiprocessing.Lock()
         db = CategorizerData(path, lock)
