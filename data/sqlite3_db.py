@@ -81,6 +81,7 @@ class CategorizerData(CategorizerLanguage):
         'catConnections' : (0, 0,      0,        0,           None,           0,            0),
         'pathRevs': (1, int(time.time()), 1),
         'fonts': (0, 1, 'Liberation Sans', 'Regular', 10, 'Black', 1), #default comes from LibreOffice Calc
+        #nodeStyleId, pathRev, name, dMetaName0, dMetaName1, fontId, backgroundColor, transparency
         'nodeStyles': (0, 1, 'default', 'TFLT', '', 0, 'White', 0, 1),
         'connectionStyles': (0, 1, 'default', 0, None, 'arrow', 'Black', 0, 1),
         'lines': (0, 1, 'Solid', 2, 'Black', 1),
@@ -142,23 +143,26 @@ class CategorizerData(CategorizerLanguage):
                 entries = columnSpec.split()
                 idName = entries[0]
                 try:
-                    self.dbCursor.execute('select MAX(' + idName + ') FROM ' + tableName)
+                    self.dbCursor.execute(f"select MAX({idName}) FROM {tableName}")
                     assert False, 'I was asked to create a new database, but there is already a database with something in it'
                 except sqlite3.OperationalError:
                     self._addTable(tableName)
 
     def _getPathRev(self):
-        # get the pathRev
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['pathRevs'][0] + ') FROM pathRevs')
+        show = False
+        if show: print('in _getPathRev()')
+        cursor = self.dbCursor.execute(f"SELECT MAX({self.columnNames['pathRevs'][0]}) FROM pathRevs")
         (pathRev,) = cursor.fetchone()
-        cursor = self.dbCursor.execute('SELECT ' + self.columnNames['pathRevs'][2] + ' FROM pathRevs')
+        cursor = self.dbCursor.execute(f"SELECT {self.columnNames['pathRevs'][-1]} FROM pathRevs WHERE {self.columnNames['pathRevs'][0]} = {pathRev}")
         (openForChange,) = cursor.fetchone()
         if openForChange:
-            pass
+            if show: print('  still open for change, do not need a new pathRev')
         else:
             # make a new pathRev, add it to pathRevs and mark it open
+            if show: print('  not open for change, make a new path rev')
             pathRev += 1
             self.dbCursor.execute(self.sqlAdds['pathRevs'], (pathRev, int(time.time()), 1))
+        if show: print(f'  returning pathRev {pathRev}')
         return pathRev
     
     def addCatNode(self, cat_var_id = None, cat_var_name = None, dx = None, dy = None, dz = None, nodeStyleId = 0):
@@ -195,7 +199,7 @@ class CategorizerData(CategorizerLanguage):
           mark the old catConnections' validForLatest = False
         '''
         show = False
-        if show: print('in editCatNode() with cat_node_id', cat_node_id, ', cat_var_id', cat_var_id, ', dx', dx, ', dy', dy, ', dz', dz, 'node_style_id', node_style_id)
+        if show: print(f"in editCatNode() with cat_node_id {cat_node_id}, cat_var_id {cat_var_id}, dx {dx}, dy {dy}, dz {dz}, node_style_id {node_style_id}")
         if cat_var_id == None and dx == None and dy == None and dz == None and node_style_id == None:
             return
 
@@ -230,13 +234,13 @@ class CategorizerData(CategorizerLanguage):
             if show: print('    rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             # get all the existing values from the current row
             (catNodeIdName, pathRevName, catVarIdName, dxName, dyName, dzName, nodeStyleIdName) = self.columnNames['catNodes'][:7]
-            sql = 'SELECT ({cni}, {pr}, {cvi}, {dx}, {dy}, {dz} {nsID} FROM catNodes '.format(cni=catNodeIdName, pr=pathRevName, cvi=catVarIdName, dx=dxName, dy=dyName, dz=dzName, nsID=nodeStyleIDName) + sqlWhere
+            sql = "SELECT ({catNodeIdName}, {pathRevName}, {catVarIdName}, {dxName}, {dyName}, {dzName} {nodeStyleIDName} FROM catNodes {sqlWhere}"
             cursor = self.dbCursor.execute(sql)
             (catNodeId, rowPathRev, oldCatVarId, oldDx, oldDy, oldDz, oldNodeStyleId) = cursor.fetchone()
 
             # set validForLatest of the old one to 0
             columnName, value = self.columnNames['catNodes'][-1], 0
-            sql = 'UPDATE catNodes SET {col} = {val}'.format(col = columnName, val = value) + sqlWhere
+            sql = "UPDATE catNodes SET {columnName} = {value} {sqlWhere}"
             if show: print('      updating validForLatest: sql = \"', sql, '\"')
             self.dbCursor.execute(sql)
 
@@ -268,7 +272,7 @@ class CategorizerData(CategorizerLanguage):
         After the connection is added, the dx, dy are determined by the GUI software and the editCatNode() is called with the dx, dy values.
         '''
         show = False
-        if show: print('in addConnection() with cat_node_id', cat_node_id, ', super_cat_node_id', super_cat_node_id, ', rel_var_id', rel_var_id, ', rel_var_name', rel_var_name)
+        if show: print("in addConnection() with cat_node_id {cat_node_id}, super_cat_node_id {super_cat_node_id}, rel_var_id {rel_var_id}, rel_var_name {rel_var_name}")
         pathRev = self._getPathRev()
         if rel_var_id == None:
             if rel_var_name == None:
@@ -280,10 +284,10 @@ class CategorizerData(CategorizerLanguage):
             conn_style_id = 0
 
         #get the next catConnId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['catConnections'][0] + ') FROM catConnections')
+        cursor = self.dbCursor.execute(f"SELECT MAX({self.columnNames['catConnections'][0]}) FROM catConnections")
         (catConnId,) = cursor.fetchone()
         catConnId += 1
-        if show: print('  catConnId', catConnId, ', pathRev', pathRev)
+        if show: print(f"  catConnId {catConnId}, pathRev {pathRev}")
         
         self.dbCursor.execute(self.sqlAdds['catConnections'], (catConnId, pathRev, cat_node_id, super_cat_node_id, rel_var_id, conn_style_id, 1))
         self.db.commit()
@@ -291,7 +295,7 @@ class CategorizerData(CategorizerLanguage):
 
     def editConnection(self, cat_conn_id, cat_node_id = None, super_cat_node_id = None, rel_var_id = None, rel_var_name = None, conn_style_id = None):
         show = False
-        if show: print('in editConnection() with cat_conn_id', cat_conn_id, ', cat_node_id', cat_node_id, ', super_cat_node_id', super_cat_node_id, ', rel_var_id', rel_var_id, ', rel_var_name', rel_var_name)
+        if show: print(f"in editConnection() with cat_conn_id {cat_conn_id}, cat_node_id {cat_node_id}, super_cat_node_id {super_cat_node_id}, rel_var_id {rel_var_id}, rel_var_name {rel_var_name}")
         
         pathRev = self._getPathRev()
 
@@ -321,13 +325,13 @@ class CategorizerData(CategorizerLanguage):
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             # get all the existing values from the current row
             (catConnIdName, pathRevName, catNodeIdName, superCatNodeIdName, relVarIdName, connStyleIdName) = self.columnNames['catConnections'][:6]
-            sql = 'SELECT ({ccni}, {pr}, {cni}, {scni}, {rvi}, {csi} FROM catNodes '.format(ccni=catConnIdName, pr=pathRevName, cni=catNodeIdName, scni=superCatNodeIdName, rvi=relVaiIdName, csi=connStyleIdName) + sqlWhere
+            sql = f"SELECT ({catConnIdName}, {pathRevName}, {catNodeIdName}, {superCatNodeIdName}, {relVarIdName}, {connStyleIdName} FROM catNodes {sqlWhere}"
             cursor = self.dbCursor.execute(sql)
             (catConnId, rowPathRev, oldCatNodeId, oldSuperCatNodeId, oldRelVarId, oldConnStyleId) = cursor.fetchone()
 
             # mark the old row as no longer the latest
             name, value = self.columnNames['catConnections'][-1], 0
-            sql = 'UPDATE catConnections set {col} = {val}'.format(col = name, val = value) + sqlWhere
+            sql = f"UPDATE catConnections set {name} = {value} {sqlWhere}"
             self.dbCursor.execute(sql)
 
             # create a new version of the catConnection which is a new row in the table.  We change one of the primary keys: pathRev
@@ -352,15 +356,15 @@ class CategorizerData(CategorizerLanguage):
 
     def _addCatNode(self, cat_var_id, dx, dy, dz, node_style_id):
         show = False
-        if show: print('in _addCatNode() with cat_var_id', cat_var_id, ', dx', dx, ', dy', dy, ', dz', dz, 'node_style_id', node_style_id)        
+        if show: print(f"in _addCatNode() with cat_var_id {cat_var_id}, dx {dx}, dy {dy}, dz {dz}, node_style_id {node_style_id}")
 
         pathRev = self._getPathRev()
 
         # get the next catId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['catNodes'][0] + ') FROM catNodes')
+        cursor = self.dbCursor.execute(f"SELECT MAX({self.columnNames['catNodes'][0]}) FROM catNodes")
         (catNodeId,) = cursor.fetchone()
         catNodeId += 1
-        if show: print('  catNodeId', catNodeId, ', pathRev', pathRev)
+        if show: print(f"  catNodeId {catNodeId}, pathRev {pathRev}")
 
         self.dbCursor.execute(self.sqlAdds['catNodes'], (catNodeId, pathRev, cat_var_id, dx, dy, dz, node_style_id, 1))
         if show:
@@ -384,8 +388,9 @@ class CategorizerData(CategorizerLanguage):
             create a new relation and a new default relation variant and return the new relVarId
         '''
         show = False
-        if show: print('in _getRelVarId() with rel_var_name', rel_var_name)
+        if show: print(f"in _getRelVarId() with rel_var_name {rel_var_name}")
         sql = 'SELECT ' + self.columnNames['relVariants'][0] + ' FROM relVariants WHERE ' + self.columnNames['relVariants'][4] + ' = "' + rel_var_name + '"'
+#        sql = f"SELECT {self.columnNames['relVariants'][0]} FROM relVariants WHERE {self.columnNames['relVariants'][4]} = "{rel_var_name + '"'
         if show: print('  sql', sql)
         cursor = self.dbCursor.execute(sql)
         data = cursor.fetchone()
@@ -599,6 +604,66 @@ class CategorizerData(CategorizerLanguage):
         self.db.commit()
         return nodeStyleId
 
+    def editNodeStyle(self, node_style_id, name = None, font_id = None, font_set = None, background_color = None, transparency = None):
+        '''
+        change one or more of font_id/font_set, background_color, transparency
+        if a note has been added since this nodeStyleId was edited, a new row will be created and the old row will be marked not valid for latest.
+        if not, the existing row will be changed.
+        '''
+        show = False
+        if show: print(f'in editNodeStyle() with nodeStyleId {node_style_id}, font_id {font_id}, font_set {font_set}, background_color {background_color}, transparency {transparency}')
+        pathRev = self._getPathRev()
+        (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('nodeStyles', node_style_id)
+        newName, newDMetaName0, newDMetaName1, newFontId, newBackgroundColor, newTransparency = None, None, None, None, None, None
+        newValues = [None] * len(self.columnNames['nodeStyles'])
+        newIdxs = []
+        if name != None:
+            (dMetaName0, dMetaName1) = self.getDMetaNames(name)
+            newValues[2], newValues[3], newValues[4] = f'"{name}"', f'"{dMetaName0}"', f'"{dMetaName1}"'
+            newIdxs += [2,3,4]
+        if font_id != None:
+            #change the font_id if different
+            newValues[5] = font_id
+            newIdxs.append(5)
+        elif font_set != None and font_set.count(None) < 4:
+            #the font_set exists and there is not a font_id
+            # see if the font_set exists, if it does get the fontId, if it doesn't create a new font and get the id
+            fontId = self._getSubTableRowId('fonts', font_set)
+            newValues[5] = fontId
+            newIdxs.append(5)
+        if background_color != None:
+            newValues[6] = f'"{background_color}"'
+            newIdxs.append(6)
+        if transparency != None:
+            newValues[7] = transparency
+            newIdxs.append(7)
+
+        if rowPathRev == pathRev:
+            if show: print('  rowPathRev == pathRev, updating data:')
+            colValPairs = [ (self.columnNames['nodeStyles'][x], newValues[x]) for x in newIdxs ]
+            self._editRow('nodeStyles', colValPairs, sqlWhere)
+        else:
+            if show: print('  rowPathRev != pathRev, create a new row')
+            # get the data for the existing row which was not specified in the arguments of this method
+            oldIdxs = []
+            for i in range(1, len(self.columnNames['nodeStyles']) - 1):
+                if newValues[i] == None:
+                    oldIdxs.append(i)
+            sql = f"SELECT ({self.columnNames['nodeStyle'][x] for x in oldIdxs}) {sqlWhere}"
+            if show: print('    sql:', sql)
+            cursor = self.dbCursor.execute(sql)
+            oldRowData = cursor.fetchone()
+            if show: print('    oldRowData:', oldRowData, ', oldIdxs', oldIdxs)
+
+            # mark the old row not valid for latest
+            sql = f'UPDATE nodeStyles set {self.columnNames["nodeStyles"][-1]} = 0 {sqlWhere}'
+            self.dbCursor.execute(sql)
+
+            # combine the old and new data and write a new row
+            for (oldIdx, oldRowDatum) in zip(oldIdxs, oldRowData):
+                newValues[oldIdx] = oldRowDatum
+            self.dbCursor.execute(self.sqlAdds['nodeStyles'], (node_style_id, pathRev) + newValues[2:-1] + 1)
+
     def addConnectionStyle(self, style_name, font_id = None, font_set = None, line_id = None, line_set = None, head_id = None, head_set = None):
         '''
         add a new style for a connection.
@@ -806,8 +871,8 @@ class CategorizerData(CategorizerLanguage):
     
     def _editRow(self, table_name, column_value_pairs, sql_where):
         show = False
-        if show: print('in _editRow() with table_name', table_name, ', column_value_pairs', column_value_pairs, ', sql_where', sql_where)
-        sql = 'UPDATE ' + table_name + ' SET'
+        if show: print(f'in _editRow() with table_name {table_name}, column_value_pairs {column_value_pairs}, sql_where {sql_where}')
+        sql = f'UPDATE {table_name} SET'
         for (columnName, value) in column_value_pairs:
             sql += ' {col} = {val},'.format(col = columnName, val = value)
         sql = sql[:-1] + sql_where #get rid of the last comma and append the 'WHERE' statement
@@ -841,7 +906,16 @@ class CategorizerData(CategorizerLanguage):
         self.dbCursor.execute(self.sqlAdds[table_name], self.tableInits[table_name])
         self.db.commit()
 
-    def addNotes(self, table_name, notes):
+    def _closePathRev(self):
+        show = True
+        if show: print('in _closePathRev()')
+        sql = f'SELECT MAX({self.columnNames["pathRevs"][0]}) FROM pathRevs'
+        cursor = self.dbCursor.execute(sql)
+        (maxPathRev, ) = cursor.fetchone()
+        sql = f'UPDATE pathRevs SET {self.columnNames["pathRevs"][-1]} = 0 WHERE {self.columnNames["pathRevs"][0]} = {maxPathRev}'
+        self.dbCursor.execute(sql)
+        
+    def addNote(self, note):
         '''
         NOT IMPLEMENTED YET
         add new notes to the database
@@ -849,31 +923,34 @@ class CategorizerData(CategorizerLanguage):
         show = True
         self.lock.acquire()
 
-        # add the table if necessary
-        try:
-            self.dbCursor.execute('select MAX(id) FROM ' + table_name)
-        except sqlite3.OperationalError:
-            self.addTable(table_name)
-
-        # add the data to the table
-        additions = []
-        numColumns = len(notes[0])
-        sqlAdd = 'INSERT INTO ' + table_name + '(noteText, date, owner) VALUES (?, ?, ?)'
+        # close the pathRev
+        self._closePathRev()
         
-        for i in range(len(notes)):
-            (noteText, date, owner) = notes[i]
-            try:
-                additions.append((
-                    str(noteText),
-                    str(date),
-                    str(owner))
-                 )
-            except:
-                print('  ERROR in add note for note', notes[i])
-        if show: print('  adding to database.  sql:', sqlAdd, '\n  additions:', additions)
-        #for addition in additions:
-        self.dbCursor.executemany(sqlAdd, additions)
-        self.db.commit()
+#        # add the table if necessary
+#        try:
+#            self.dbCursor.execute('select MAX(id) FROM ' + table_name)
+#        except sqlite3.OperationalError:
+#            self.addTable(table_name)
+
+#        # add the data to the table
+#        additions = []
+#        numColumns = len(notes[0])
+#        sqlAdd = 'INSERT INTO ' + table_name + '(noteText, date, owner) VALUES (?, ?, ?)'
+        
+#        for i in range(len(notes)):
+#            (noteText, date, owner) = notes[i]
+#            try:
+#                additions.append((
+#                    str(noteText),
+#                    str(date),
+#                    str(owner))
+#                 )
+#            except:
+#                print('  ERROR in add note for note', notes[i])
+#        if show: print('  adding to database.  sql:', sqlAdd, '\n  additions:', additions)
+#        #for addition in additions:
+#        self.dbCursor.executemany(sqlAdd, additions)
+#        self.db.commit()
         self.lock.release()
         return True
 

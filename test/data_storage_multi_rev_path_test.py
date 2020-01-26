@@ -1,10 +1,6 @@
 '''
 history
-12/19/18 - 
-    add try for test01, 
-    r'SELECT... == "{}"'.format(catname)
-    change to try: instead of return False
-
+1/23/20 - created from data_storage_path_test.py
 '''
 import unittest
 import multiprocessing
@@ -18,12 +14,11 @@ from test_utils import TestUtils
 # as test are run, things are added and changed in the database,
 # and things are added and changed to the expect dataa
 class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
-    runAll = True
+    runAll = False
     runTestCounts = list(range(3))
     fontSet = CategorizerLanguage.FontSet
     lineSet = CategorizerLanguage.LineSet
     headSet = CategorizerLanguage.HeadSet
-    
     expDataa = {
         'categories'      : [CategorizerData.tableInits['categories']],
         'catVariants'     : [CategorizerData.tableInits['catVariants']],
@@ -37,9 +32,8 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         'lines'           : [CategorizerData.tableInits['lines']],
         'heads'           : [CategorizerData.tableInits['heads']],
     }
-    path = './test.db'
+    path = './multi_path_test.db'
     lock = multiprocessing.Lock()
-    
     def test_00_instantiate(self):
         if not self.runAll:
             if 0 not in self.runTestCounts:
@@ -61,15 +55,19 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         if not self.runAll:
             if 2 not in self.runTestCounts:
                 return
-        show = False
+        show = True
         print('  test_02_addCategory')
-        addCats = ('Farm', 'Horse', 'Pig', 'Dog')
+        addCatsA = ('Farm', 'Horse', 'Pig', 'Dog')
+        addCatsB = ('Moose', 'Elk', 'Bison')
         newExpCats = (
             #catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
             (1, 1,  'Farm', 'FRM', '', 1),
             (2, 1, 'Horse', 'HRS', '', 1),
-            (3, 1,   'Pig', 'PK', '', 1),
-            (4, 1,   'Dog', 'TK', '', 1),
+            (3, 1,   'Pig',  'PK', '', 1),
+            (4, 1,   'Dog',  'TK', '', 1),
+            (5, 2,   'Moose',  'MS', '', 1),
+            (6, 2,   'Elk',  'ALK', '', 1),
+            (7, 2,   'Bison',  'PSN', '', 1),
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catVarName, dMetaName0, dMetaName1, validForLatest
@@ -77,10 +75,17 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             (2, 1, 2,   None, '', '', 1),
             (3, 1, 3,   None, '', '', 1),
             (4, 1, 4,   None, '', '', 1),
+            (5, 2, 5,   None, '', '', 1),
+            (6, 2, 6,   None, '', '', 1),
+            (7, 2, 7,   None, '', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for idx, cat in enumerate(addCats):
+        for idx, cat in enumerate(addCatsA):
             db._addCategory(cat)
+        db.addNote('test note 1')
+        for idx, cat in enumerate(addCatsB):
+            db._addCategory(cat)
+            
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
@@ -609,7 +614,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         if not self.runAll:
             if 21 not in self.runTestCounts:
                 return
-        show = False
+        show = True
         print('  test_21_findCatVariantIds')
         db = CategorizerData(self.path, self.lock)
         findNames = (
