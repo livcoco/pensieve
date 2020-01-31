@@ -324,10 +324,11 @@ class CategorizerData(CategorizerLanguage):
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             # get all the existing values from the current row
-            (catConnIdName, pathRevName, catNodeIdName, superCatNodeIdName, relVarIdName, connStyleIdName) = self.columnNames['catConnections'][:6]
-            sql = f"SELECT ({catConnIdName}, {pathRevName}, {catNodeIdName}, {superCatNodeIdName}, {relVarIdName}, {connStyleIdName} FROM catNodes {sqlWhere}"
+            (pathRevName, catNodeIdName, superCatNodeIdName, relVarIdName, connStyleIdName) = self.columnNames['catConnections'][1:6]
+            sql = f"SELECT {pathRevName}, {catNodeIdName}, {superCatNodeIdName}, {relVarIdName}, {connStyleIdName} FROM catConnections {sqlWhere}"
+            if show: print('  sql', sql)
             cursor = self.dbCursor.execute(sql)
-            (catConnId, rowPathRev, oldCatNodeId, oldSuperCatNodeId, oldRelVarId, oldConnStyleId) = cursor.fetchone()
+            (rowPathRev, oldCatNodeId, oldSuperCatNodeId, oldRelVarId, oldConnStyleId) = cursor.fetchone()
 
             # mark the old row as no longer the latest
             name, value = self.columnNames['catConnections'][-1], 0
@@ -545,10 +546,9 @@ class CategorizerData(CategorizerLanguage):
             #do I need to change the default catVariant (the one with None for a name also?) 
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
-            name, value = self.columnNames['categories'][-1], 0
-            sql = 'UPDATE categories set {name} = {value} {sqlWhere}'
+            sql = f'UPDATE categories set {self.columnNames["categories"][-1]} = 0 {sqlWhere}'
             self.dbCursor.execute(sql)
-            self.dbCursor.execute(self.sqlAdds['categories'], (cat_id, pathRev, cat_name, 1))
+            self.dbCursor.execute(self.sqlAdds['categories'], (cat_id, pathRev, cat_name, dMetaName0, dMetaName1, 1))
         self.db.commit()
         
     def editCatVariant(self, cat_var_id, cat_var_name):
@@ -572,10 +572,15 @@ class CategorizerData(CategorizerLanguage):
             #do I need to change the default catVariant (the one with None for a name also?) 
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
-            name, value = self.columnNames['categories'][-1], 0
-            sql = f'UPDATE catVariants set {name} = {value} {sqlWhere}'
+            # get the catId from the existing catVariant
+            sql = f'SELECT {self.columnNames["catVariants"][2]} FROM catVariants {sqlWhere}'
+            cursor = self.dbCursor.execute(sql)
+            (catId,) = cursor.fetchone()
+            
+            sql = f'UPDATE catVariants set {self.columnNames["categories"][-1]} = 0 {sqlWhere}'
             self.dbCursor.execute(sql)
-            self.dbCursor.execute(self.sqlAdds['catVariants'], (cat_var_id, pathRev, cat_var_name, dMetaName0, dMetaName1, 1))
+
+            self.dbCursor.execute(self.sqlAdds['catVariants'], (cat_var_id, pathRev, catId, cat_var_name, dMetaName0, dMetaName1, 1))
         self.db.commit()
         
     def addNodeStyle(self, style_name, font_id = None, font_set = None, background_color = None, transparency = None):
@@ -614,32 +619,38 @@ class CategorizerData(CategorizerLanguage):
         pathRev = self._getPathRev()
         (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('nodeStyles', node_style_id)
         newName, newDMetaName0, newDMetaName1, newFontId, newBackgroundColor, newTransparency = None, None, None, None, None, None
+        newValuesStr = [None] * len(self.columnNames['nodeStyles'])
         newValues = [None] * len(self.columnNames['nodeStyles'])
         newIdxs = []
         if name != None:
             (dMetaName0, dMetaName1) = self.getDMetaNames(name)
-            newValues[2], newValues[3], newValues[4] = f'"{name}"', f'"{dMetaName0}"', f'"{dMetaName1}"'
+            newValuesStr[2], newValuesStr[3], newValuesStr[4] = f'"{name}"', f'"{dMetaName0}"', f'"{dMetaName1}"'
+            newValues[2], newValues[3], newValues[4] = f'{name}', f'{dMetaName0}', f'{dMetaName1}'
             newIdxs += [2,3,4]
         if font_id != None:
             #change the font_id if different
+            newValuesStr[5] = font_id
             newValues[5] = font_id
             newIdxs.append(5)
         elif font_set != None and font_set.count(None) < 4:
             #the font_set exists and there is not a font_id
             # see if the font_set exists, if it does get the fontId, if it doesn't create a new font and get the id
             fontId = self._getSubTableRowId('fonts', font_set)
+            newValuesStr[5] = fontId
             newValues[5] = fontId
             newIdxs.append(5)
         if background_color != None:
-            newValues[6] = f'"{background_color}"'
+            newValuesStr[6] = f'"{background_color}"'
+            newValues[6] = f'{background_color}'
             newIdxs.append(6)
         if transparency != None:
+            newValuesStr[7] = transparency
             newValues[7] = transparency
             newIdxs.append(7)
 
         if rowPathRev == pathRev:
             if show: print('  rowPathRev == pathRev, updating data:')
-            colValPairs = [ (self.columnNames['nodeStyles'][x], newValues[x]) for x in newIdxs ]
+            colValPairs = [ (self.columnNames['nodeStyles'][x], newValuesStr[x]) for x in newIdxs ]
             self._editRow('nodeStyles', colValPairs, sqlWhere)
         else:
             if show: print('  rowPathRev != pathRev, create a new row')
@@ -648,7 +659,7 @@ class CategorizerData(CategorizerLanguage):
             for i in range(1, len(self.columnNames['nodeStyles']) - 1):
                 if newValues[i] == None:
                     oldIdxs.append(i)
-            sql = f"SELECT ({self.columnNames['nodeStyle'][x] for x in oldIdxs}) {sqlWhere}"
+            sql = f"SELECT {', '.join([self.columnNames['nodeStyles'][x] for x in oldIdxs])} FROM nodeStyles {sqlWhere}"
             if show: print('    sql:', sql)
             cursor = self.dbCursor.execute(sql)
             oldRowData = cursor.fetchone()
@@ -661,7 +672,7 @@ class CategorizerData(CategorizerLanguage):
             # combine the old and new data and write a new row
             for (oldIdx, oldRowDatum) in zip(oldIdxs, oldRowData):
                 newValues[oldIdx] = oldRowDatum
-            self.dbCursor.execute(self.sqlAdds['nodeStyles'], (node_style_id, pathRev) + newValues[2:-1] + 1)
+            self.dbCursor.execute(self.sqlAdds['nodeStyles'], (node_style_id, pathRev) + tuple(newValues[2:-1]) + (1,))
 
     def addConnectionStyle(self, style_name, font_id = None, font_set = None, line_id = None, line_set = None, head_id = None, head_set = None):
         '''

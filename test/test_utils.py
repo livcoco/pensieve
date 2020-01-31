@@ -11,14 +11,6 @@ class TestUtils:
             else:
                 self.expDataa[name].append(data)
 
-    def _addExpDataaOLD(self, name, dataa):
-        for data in dataa:
-            dataIdx = data[0]
-            if dataIdx < len(self.expDataa[name]):
-                self.expDataa[name][dataIdx] = data
-            else:
-                self.expDataa[name].append(data)
-
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
             print('   ', tuplesName,':')

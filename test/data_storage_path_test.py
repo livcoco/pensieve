@@ -19,7 +19,7 @@ from test_utils import TestUtils
 # and things are added and changed to the expect dataa
 class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
     runAll = True
-    runTestCounts = list(range(3))
+    runTestCounts = list(range(15))
     fontSet = CategorizerLanguage.FontSet
     lineSet = CategorizerLanguage.LineSet
     headSet = CategorizerLanguage.HeadSet
@@ -341,9 +341,8 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             #catVarId, pathRev, catId, catName, validForLatest
         )
         db = CategorizerData(self.path, self.lock)
-        for i in range(len(edits)):
-            catId = edits[i][0]
-            catName = edits[i][1]
+        if show: self.showTables(db, ('categories', 'catVariants'))
+        for (catId, catName) in edits:
             db.editCategory(catId, catName)
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
@@ -630,41 +629,6 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 else: print()
             else:
                 self.assertEqual(expCatVarIds, actCatVarIds)
-                
-#    def compareTuples(self, tuplesName, expTuples, actTuples, show):
-#        if show:
-#            print('   ', tuplesName,':')
-#            showErrorCnt = 0
-#            for (expTuple, actTuple) in zip(expTuples, actTuples):
-#                print('      exp:', expTuple, ', act:', actTuple, end=' ')
-#                if expTuple != actTuple:
-#                    showErrorCnt += 1
-#                    print('******************************** ERROR ****************************')
-#                else: print()
-#            #print('TMPDEBUG', len(expTuple), len(actTuple))
-#            if len(expTuples) != len(actTuples):
-#                showErrorCnt += 1
-#                numExp = len(expTuples)
-#                numAct = len(actTuples)
-#                print('    there are', numExp, 'expected data and', numAct, 'actual data.  ************************************* ERROR **************************')
-#                if numExp > numAct:
-#                    for expDataIdx in range(numAct, numExp):
-#                        print('      extra exp:', expTuples[expDataIdx])
-#                else:
-#                    for actDataIdx in range(numExp, numAct):
-#                        print('      extra act:', actTuples[actDataIdx])
-                        
-#            print('  got', showErrorCnt, 'ERRORS')
-#        else:
-#            self.assertEqual(tuple(expTuples), tuple(actTuples))
-
-#    def _addExpDataa(self, name, dataa):
-#        for data in dataa:
-#            dataIdx = data[0]
-#            if dataIdx < len(self.expDataa[name]):
-#                self.expDataa[name][dataIdx] = data
-#            else:
-#                self.expDataa[name].append(data)
                 
 if __name__ == '__main__':
     unittest.main()
