@@ -3,11 +3,22 @@ class TestUtils:
     def _addExpDataa(self, name, dataa):
         for data in dataa:
             dataIdx = data[0]
+            if dataIdx < len(self.expDataa[name]) and self.expDataa[name][dataIdx][-1] == 1:
+                # the Categorizer will mark old data's validForLatest to 0
+                # data must always be sent to this method in the order of old data, then
+                # new data, i.e. validForLatest == 0 data first, then validForLatest == 1 data
+                self.expDataa[name][dataIdx] = data
+            else:
+                self.expDataa[name].append(data)
+
+    def _addExpDataaOLD(self, name, dataa):
+        for data in dataa:
+            dataIdx = data[0]
             if dataIdx < len(self.expDataa[name]):
                 self.expDataa[name][dataIdx] = data
             else:
                 self.expDataa[name].append(data)
-                
+
     def compareTuples(self, tuplesName, expTuples, actTuples, show):
         if show:
             print('   ', tuplesName,':')
@@ -30,7 +41,7 @@ class TestUtils:
                 else:
                     for actDataIdx in range(numExp, numAct):
                         print('      extra act:', actTuples[actDataIdx])
-                        
+
             print('  got', showErrorCnt, 'ERRORS')
         else:
             self.assertEqual(tuple(expTuples), tuple(actTuples))
@@ -40,4 +51,3 @@ class TestUtils:
             print(' ', tableName)
             for row in db.dumpTable(tableName):
                 print('   ', row)
-                

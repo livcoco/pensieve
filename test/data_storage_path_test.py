@@ -96,9 +96,9 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         print('  test_03_addCategoryVariant')
         addCatVars = (
             #skip variant for Farm
-            (5, 1, 2,  'horsey', 1),
-            (6, 1, 3,   'piggy', 1),
-            (7, 1, 4,  'doggie', 1),
+            (2,  'horsey'),
+            (3,   'piggy'),
+            (4,  'doggie'),
         )
         newExpCatVars = (
             #skip variant for Farm
@@ -107,9 +107,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             (7, 1, 4,  'doggie', 'TJ', 'TK',  1),
         )
         db = CategorizerData(self.path, self.lock)
-        for i in range(len(addCatVars)):
-            catId = addCatVars[i][2]
-            catVarName = addCatVars[i][3]
+        for (catId, catVarName) in addCatVars:
             db._addCatVariant(catId, catVarName)
         self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
@@ -134,7 +132,6 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         )
         newExpCatNodes = (
             #catNodeId, pathRev, catVarId, dx, dy, nodeStyleId, validForLatest
-#            (0, 0, 0,  None, None, 0, 0),
             (1, 1, 1,  None, None, None, 0, 1),
             (2, 1, 2,  None, None, None, 0, 1),
             (3, 1, 5,  None, None, None, 0, 1),
@@ -153,9 +150,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             (9, 1, 6,  None, '', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for i in range(len(addCatNodes)):
-            catVarId = addCatNodes[i][0]
-            catVarName = addCatNodes[i][1]
+        for (catVarId, catVarName) in addCatNodes:
             db.addCatNode(catVarId, catVarName)
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
@@ -175,7 +170,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         show = False
         print('  test_05_addRelation')
         addRels = (
-            #prefix, relName, validForLatest
+            #prefix, relName, direction
             ('hyper', 'is-a', 'out'),
             ('super', 'has-a', 'in'),
             ('pre', 'prior in sequence', 'out'),

@@ -87,10 +87,9 @@ class CategorizerData(CategorizerLanguage):
         'lines': (0, 1, 'Solid', 2, 'Black', 1),
         'heads': (0, 1, 'Filled', 4, 'Black', 1),
     }
-
     typeInt = type(1)
     typeStr = type('s')
-    
+
     def __init__(self, database_path_and_file_name, lock, in_memory = False, create_new_database = False):
         show = False
         if show: print('in CategorizerData.__init__()')
@@ -199,7 +198,7 @@ class CategorizerData(CategorizerLanguage):
           mark the old catConnections' validForLatest = False
         '''
         show = False
-        if show: print(f"in editCatNode() with cat_node_id {cat_node_id}, cat_var_id {cat_var_id}, dx {dx}, dy {dy}, dz {dz}, node_style_id {node_style_id}")
+        if show: print(f"in editCatNode() with cat_node_id {cat_node_id}, cat_var_id {cat_var_id}, cat_var_name {cat_var_name}, dx {dx}, dy {dy}, dz {dz}, node_style_id {node_style_id}")
         if cat_var_id == None and dx == None and dy == None and dz == None and node_style_id == None:
             return
 
@@ -233,14 +232,15 @@ class CategorizerData(CategorizerLanguage):
             # The pathRevs are not the same, so we need to make a new tuple in the database
             if show: print('    rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             # get all the existing values from the current row
-            (catNodeIdName, pathRevName, catVarIdName, dxName, dyName, dzName, nodeStyleIdName) = self.columnNames['catNodes'][:7]
-            sql = "SELECT ({catNodeIdName}, {pathRevName}, {catVarIdName}, {dxName}, {dyName}, {dzName} {nodeStyleIDName} FROM catNodes {sqlWhere}"
+            (catNodeIdName, pathRevName, catVarIdName, dxName, dyName, dzName, nodeStyleIDName) = self.columnNames['catNodes'][:7]
+            sql = f"SELECT {catNodeIdName}, {pathRevName}, {catVarIdName}, {dxName}, {dyName}, {dzName}, {nodeStyleIDName} FROM catNodes {sqlWhere}"
+            if show: print('    sql:', sql)
             cursor = self.dbCursor.execute(sql)
             (catNodeId, rowPathRev, oldCatVarId, oldDx, oldDy, oldDz, oldNodeStyleId) = cursor.fetchone()
 
             # set validForLatest of the old one to 0
             columnName, value = self.columnNames['catNodes'][-1], 0
-            sql = "UPDATE catNodes SET {columnName} = {value} {sqlWhere}"
+            sql = f"UPDATE catNodes SET {columnName} = {value} {sqlWhere}"
             if show: print('      updating validForLatest: sql = \"', sql, '\"')
             self.dbCursor.execute(sql)
 
@@ -389,32 +389,31 @@ class CategorizerData(CategorizerLanguage):
         '''
         show = False
         if show: print(f"in _getRelVarId() with rel_var_name {rel_var_name}")
-        sql = 'SELECT ' + self.columnNames['relVariants'][0] + ' FROM relVariants WHERE ' + self.columnNames['relVariants'][4] + ' = "' + rel_var_name + '"'
-#        sql = f"SELECT {self.columnNames['relVariants'][0]} FROM relVariants WHERE {self.columnNames['relVariants'][4]} = "{rel_var_name + '"'
-        if show: print('  sql', sql)
+        sql = f'SELECT {self.columnNames["relVariants"][0]} FROM relVariants WHERE {self.columnNames["relVariants"][4]} = "{rel_var_name}"'
+        if show: print(f'  sql {sql}')
         cursor = self.dbCursor.execute(sql)
         data = cursor.fetchone()
         if data:
             #found an exact match of the name
             (relVarId,) = data
         else:
-            sql = 'SELECT ' + self.columnNames['relations'][0] + ' FROM relations WHERE ' + self.columnNames['relations'][3] + ' = "' + rel_var_name + '"'
-            if show: print('  sql', sql)
+            sql = f'SELECT {self.columnNames["relations"][0]} FROM relations WHERE {self.columnNames["relations"][3]} = "{rel_var_name}"'
+            if show: print(f'  sql {sql}')
             cursor = self.dbCursor.execute(sql)
             data = cursor.fetchone()
             if data:
                 # found an exact match of the name in the relations table
                 (relId,) = data
                 # find the default relVarId for this relation
-                sql = 'SELECT ' + self.columnNames['relVariants'][0] + ' FROM relVariants WHERE ' + self.columnNames['relVariants'][2] + ' = ' + str(relId)# + ' AND ' + self.columnNames['relVariants'][4] + ' = "' + str(None) + '"'
-                if show: print('  sql', sql)
+                sql = f'SELECT {self.columnNames["relVariants"][0]} FROM relVariants WHERE {self.columnNames["relVariants"][2]} = {str(relId)}'
+                if show: print(f'  sql {sql}')
                 cursor = self.dbCursor.execute(sql)
                 (relVarId,) = cursor.fetchone()
             else:
                 # did not find the relation name anywhere, create a new relation
                 relVarId = self._addRelation(None, rel_var_name, None)
                 
-        if show: print('  returning relVarId', relVarId)
+        if show: print(f'  returning relVarId {relVarId}')
         return relVarId
     
     def _addCategory(self, cat_name):
@@ -424,15 +423,15 @@ class CategorizerData(CategorizerLanguage):
         The category must be added before it is used for a node.
         '''
         show = False
-        if show: print('in _addCategory() with cat_name', cat_name)        
+        if show: print(f'in _addCategory() with cat_name {cat_name}')        
 
         pathRev = self._getPathRev()
 
         # get the next catId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['categories'][0] + ') FROM categories')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["categories"][0]}) FROM categories')
         (catId,) = cursor.fetchone()
         catId += 1
-        if show: print('  catId', catId, ', pathRev', pathRev)
+        if show: print(f'  catId {catId}, pathRev {pathRev}')
         (dMetaName0, dMetaName1) = self.getDMetaNames(cat_name)
         # add the category
         self.dbCursor.execute(self.sqlAdds['categories'], (catId, pathRev, cat_name, dMetaName0, dMetaName1, 1))
@@ -452,12 +451,12 @@ class CategorizerData(CategorizerLanguage):
         The category and at least the default category variant must be added before it is used for a node.
         '''
         show = False
-        if show: print('in _addCatVariant() with cat_id', cat_id, ', cat_var_name', cat_var_name)
+        if show: print(f'in _addCatVariant() with cat_id {cat_id}, cat_var_name {cat_var_name}')
 
         pathRev = self._getPathRev()
 
         # add the catVariant for the category
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['catVariants'][0] + ') FROM catVariants')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["catVariants"][0]}) FROM catVariants')
         (catVarId,) = cursor.fetchone()
         catVarId += 1
         (dMetaName0, dMetaName1) = self.getDMetaNames(cat_var_name)
@@ -467,11 +466,11 @@ class CategorizerData(CategorizerLanguage):
 
     def _addRelation(self, rel_prefix, rel_name, direction):
         show = False
-        if show: print('in _addRelation() with rel_prefix', rel_prefix, ', rel_name', rel_name, ', direction', direction)
+        if show: print(f'in _addRelation() with rel_prefix {rel_prefix}, rel_name {rel_name}, direction {direction}')
         pathRev = self._getPathRev()
 
         # get the next relId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['relations'][0] + ') FROM relations')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["relations"][0]}) FROM relations')
         (relId,) = cursor.fetchone()
         relId += 1
         if show: print('  relId', relId, ', pathRev', pathRev)
@@ -493,12 +492,12 @@ class CategorizerData(CategorizerLanguage):
         The relation variant (could be the default relation variant) must be added before it is used for a node.
         '''
         show = False
-        if show: print('in _addRelVariant() with rel_id', rel_id, ', rel_var_prefix', rel_var_prefix, ', rel_var_name', rel_var_name, ', var_direction', var_direction)        
+        if show: print(f'in _addRelVariant() with rel_id {rel_id}, rel_var_prefix {rel_var_prefix}, rel_var_name {rel_var_name}, var_direction {var_direction}')        
 
         pathRev = self._getPathRev()
 
         # add the relation variant for the relation
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['relVariants'][0] + ') FROM relVariants')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["relVariants"][0]}) FROM relVariants')
         (relVarId,) = cursor.fetchone()
         relVarId += 1
 
@@ -531,7 +530,7 @@ class CategorizerData(CategorizerLanguage):
         It could also be a more specific term if the category is being split into two or more parts.  Then the other category(ies) would be added with addCatNode().
         '''
         show = False
-        if show: print('in editCategory() with cat_id', cat_id, ', cat_name', cat_name)
+        if show: print(f'in editCategory() with cat_id {cat_id}, cat_name {cat_name}')
         pathRev = self._getPathRev()
         (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('categories', cat_id)
         (dMetaName0, dMetaName1) = self.getDMetaNames(cat_name)
@@ -547,7 +546,7 @@ class CategorizerData(CategorizerLanguage):
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             name, value = self.columnNames['categories'][-1], 0
-            sql = 'UPDATE categories set {col} = {val}'.format(col = name, val = value) + sqlWhere
+            sql = 'UPDATE categories set {name} = {value} {sqlWhere}'
             self.dbCursor.execute(sql)
             self.dbCursor.execute(self.sqlAdds['categories'], (cat_id, pathRev, cat_name, 1))
         self.db.commit()
@@ -558,7 +557,7 @@ class CategorizerData(CategorizerLanguage):
         It could also be a more specific term if the category variant is being split into two or more parts.  Then the other category(ies) / catVariant(s) would be added with addCatNode().
         '''
         show = False
-        if show: print('in editCatVariant() with cat_var_id', cat_var_id, ', cat_var_name', cat_var_name)
+        if show: print(f'in editCatVariant() with cat_var_id {cat_var_id}, cat_var_name {cat_var_name}')
         pathRev = self._getPathRev()
         (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('catVariants', cat_var_id)
         (dMetaName0, dMetaName1) = self.getDMetaNames(cat_var_name)
@@ -574,7 +573,7 @@ class CategorizerData(CategorizerLanguage):
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
             name, value = self.columnNames['categories'][-1], 0
-            sql = 'UPDATE catVariants set {col} = {val}'.format(col = name, val = value) + sqlWhere
+            sql = f'UPDATE catVariants set {name} = {value} {sqlWhere}'
             self.dbCursor.execute(sql)
             self.dbCursor.execute(self.sqlAdds['catVariants'], (cat_var_id, pathRev, cat_var_name, dMetaName0, dMetaName1, 1))
         self.db.commit()
@@ -587,12 +586,12 @@ class CategorizerData(CategorizerLanguage):
         In addition to font, the background_color and transparency can be specified or left blank to use defaults.
         '''
         show = False
-        if show: print('in addNodeStyle() with style_name', style_name, ', font_id', font_id, ', font_set', font_set, ', background_color', background_color, ', transparency', transparency)
+        if show: print('in addNodeStyle() with style_name {style_name}, font_id {font_id}, font_set {font_set}, background_color {background_color}, transparency {transparency}')
         pathRev = self._getPathRev()
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['nodeStyles'][0] + ') FROM nodeStyles')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["nodeStyles"][0]}) FROM nodeStyles')
         (nodeStyleId,) = cursor.fetchone()
         nodeStyleId += 1
-        if show: print('  nodeStyleId', nodeStyleId, ', pathRev', pathRev)
+        if show: print(f'  nodeStyleId {nodeStyleId}, pathRev {pathRev}')
 
         # if we do not have a font_id, and we have other font info, create a new font
         if font_id == None:
@@ -673,12 +672,12 @@ class CategorizerData(CategorizerLanguage):
         In addition to font, the background_color and transparency can be specified or left blank to use defaults.
         '''
         show = False
-        if show: print('in addConnectionStyle() with style_name', style_name, ', font_id', font_id, ', font_set', font_set, ', line_id', line_id, ', line_set', line_set, ', head_id', head_id, ', head_set', head_set)
+        if show: print(f'in addConnectionStyle() with style_name {style_name}, font_id {font_id}, font_set {font_set}, line_id {line_id}, line_set {line_set}, head_id {head_id}, head_set {head_set}')
         pathRev = self._getPathRev()
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames['connectionStyles'][0] + ') FROM connectionStyles')
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames["connectionStyles"][0]}) FROM connectionStyles')
         (connectionStyleId,) = cursor.fetchone()
         connectionStyleId += 1
-        if show: print('  connectionStyleId', connectionStyleId, ', pathRev', pathRev)
+        if show: print('  connectionStyleId {connectionStyleId}, pathRev {pathRev}')
 
         # if we do not have a font_id, and we have other font info, create a new font
         if font_id == None:
@@ -701,7 +700,7 @@ class CategorizerData(CategorizerLanguage):
 
     def _getSubTableRowId(self, sub_table_name, data_set):
         show = False
-        if show: print('in _getSubTableRowId() with sub_table_name', sub_table_name, ', data_set', data_set)
+        if show: print(f'in _getSubTableRowId() with sub_table_name {sub_table_name}, data_set {data_set}')
         data = data_set[0:]
         if data_set and data.count(None) < len(data):
             # see if we have an exact match already in the fonts table
@@ -726,15 +725,15 @@ class CategorizerData(CategorizerLanguage):
         add a row to a subTable, e.g. fonts, lines, heads
         '''
         show = False
-        if show: print('in _addSubTableRow() with data_set', data_set)
+        if show: print(f'in _addSubTableRow() with data_set {data_set}')
 
         pathRev = self._getPathRev()
 
         # get the next rowId
-        cursor = self.dbCursor.execute('SELECT MAX(' + self.columnNames[sub_table_name][0] + ') FROM ' + sub_table_name)
+        cursor = self.dbCursor.execute(f'SELECT MAX({self.columnNames[sub_table_name][0]}) FROM {sub_table_name}')
         (rowId,) = cursor.fetchone()
         rowId += 1
-        if show: print('  rowId', rowId, ', pathRev', pathRev)
+        if show: print(f'  rowId {rowId}, pathRev {pathRev}')
         self.dbCursor.execute(self.sqlAdds[sub_table_name], (rowId, pathRev) + data_set[0:] + (1,) )
         if show:
             print('    added new line:', (rowId, pathRev, data_set[0:], 1))
@@ -755,8 +754,8 @@ class CategorizerData(CategorizerLanguage):
 
         # find the matches in categories, then find the categories catVarIds in catVariants
         catIds = []
-        sqlBegin = 'SELECT ' + self.columnNames['categories'][0] + ' FROM categories WHERE '
-        sqlEnd = ' IN ' + dMetaNamesStr
+        sqlBegin = f"SELECT {self.columnNames['categories'][0]} FROM categories WHERE "
+        sqlEnd = f" IN {dMetaNamesStr}"
         if only_latest:
             sqlEnd += f' AND {self.columnNames["categories"][-1]} = 1'
         for sqlMid in (self.columnNames['categories'][3], self.columnNames['categories'][4]):
@@ -777,12 +776,12 @@ class CategorizerData(CategorizerLanguage):
         return a tuple of catVarIds
         '''
         show = False
-        if show: print('in findCatVariantIds() with name', name, ', only_latest', only_latest)
+        if show: print(f'in findCatVariantIds() with name {name}, only_latest {only_latest}')
         dMetaNames = self.getDMetaNames(name)
         if dMetaNames[1] == '':
             dMetaNames = (dMetaNames[0],)
         dMetaNamesStr = '("' + '", "'.join(dMetaNames) + '")'
-        if show: print('  dMetaNames', dMetaNames, ', dMetaNamesStr', dMetaNamesStr)
+        if show: print(f'  dMetaNames {dMetaNames}, dMetaNamesStr {dMetaNamesStr}')
 
         catVarIds = []
         catVarIdsCatIds = []
@@ -805,38 +804,37 @@ class CategorizerData(CategorizerLanguage):
         if len(catIds) == 1:
             # get rid of the trailing comma because
             catIdsStr = catIdsStr[0:len(catIdsStr)-2] + ')'
-        if show: print('  categories catIdsStr', catIdsStr)
+        if show: print(f'  categories catIdsStr {catIdsStr}')
 
         # find the categories catVarIds in catVariants
         sql = f'SELECT {self.columnNames["catVariants"][0]} FROM catVariants WHERE {self.columnNames["catVariants"][2]} IN {catIdsStr}'
         if only_latest:
             sql += f' AND {self.columnNames["catVariants"][-1]} = 1'
-        if show: print('  find categories catVarIds in catVariants sql:', sql)
+        if show: print(f'  find categories catVarIds in catVariants sql: {sql}')
         cursor = self.dbCursor.execute(sql)
         tmpRowIds = cursor.fetchall()
         catVarIds += [tmpRowIds[x][0] for x in range(len(tmpRowIds))]
-        if show: print('  categories and catVariant catVarIds', catVarIds)
+        if show: print(f'  categories and catVariant catVarIds {catVarIds}')
         if len(catVarIds) == 0:
             catVarIds = (0,)
         return tuple(catVarIds)
 
     def _getMatchingRowIds(self, table_name, col_val_pairs, only_valid_for_latest = True):
         show = False
-        if show: print('in _getMatchingRowIds() with table_name', table_name, ', col_val_pairs', col_val_pairs, ', only_valid_for_latest', only_valid_for_latest)
+        if show: print(f'in _getMatchingRowIds() with table_name {table_name}, col_val_pairs {col_val_pairs}, only_valid_for_latest {only_valid_for_latest}')
         sqlWhere = ' WHERE '
         for (colName, colVal) in col_val_pairs:
             if type(colVal) == self.typeStr:
-                sqlWhere += colName + ' == "' + colVal + '" AND '
+                sqlWhere += f'{colName} == "{colVal}" AND '
             else:
-                sqlWhere += colName + ' == ' + str(colVal) + ' AND '
+                sqlWhere += f'{colName} ==  {colVal} AND '
         if only_valid_for_latest:
             sqlWhere += 'validForLatest == 1'
         else:
             sqlWhere = sqlWhere[:-5]
         if show: print('  sqlWhere', sqlWhere)
-#        sql = 'SELECT ' + self.columnNames[table_name][0] + ', ' + self.columnNames[table_name][1] + ' FROM ' + table_name + sqlWhere
-        sql = 'SELECT ' + self.columnNames[table_name][0] + ' FROM ' + table_name + sqlWhere
-        if show: print('  sql:', sql)
+        sql = f'SELECT {self.columnNames[table_name][0]} FROM {table_name} {sqlWhere}'
+        if show: print(f'  sql: {sql}')
         try:
             cursor = self.dbCursor.execute(sql)
         except sqlite3.OperationalError as e:
@@ -854,19 +852,20 @@ class CategorizerData(CategorizerLanguage):
 
     def _getRowPathRevAndSQLWhere(self, table_name, row_id):
         '''
-        the 1st column of all tables must be an id
-        the 2nd column of all tables must be pathRev
+        the 1st  column of all tables must be an id
+        the 2nd  column of all tables must be pathRev
         the last column of all tables must be validForLatest
         '''
         show = False
-        if show: print('in _getRowPathRevAndSQLWhere() with table_name', table_name, ', row_id', row_id)
+        if show: print(f'in _getRowPathRevAndSQLWhere() with table_name {table_name}, row_id {row_id}')
         columnNames = self.columnNames[table_name]
-        sqlWhere = ' WHERE ' + columnNames[0] + ' == ' + str(row_id) + ' AND ' + columnNames[-1] + ' == 1'
-        sql = 'SELECT ' + columnNames[1] + ' FROM ' + table_name + sqlWhere
-        if show: print('  sql:', sql)
+        sqlWhere = f' WHERE {columnNames[0]} == {row_id} AND {columnNames[-1]} == 1'
+#        sqlWhere = f' WHERE {columnNames[0]} = {row_id} AND {columnNames[-1]} = 1'
+        sql = f'SELECT {columnNames[1]} FROM {table_name} {sqlWhere}'
+        if show: print(f'  sql: {sql}')
         cursor = self.dbCursor.execute(sql)
         (rowPathRev,) = cursor.fetchone()
-        if show: print('  returning (rowPathRev', rowPathRev, ', sqlWhere', sqlWhere, ')')
+        if show: print(f'  returning (rowPathRev {rowPathRev}, sqlWhere {sqlWhere})')
         return (rowPathRev, sqlWhere)
     
     def _editRow(self, table_name, column_value_pairs, sql_where):
@@ -876,6 +875,8 @@ class CategorizerData(CategorizerLanguage):
         for (columnName, value) in column_value_pairs:
             sql += ' {col} = {val},'.format(col = columnName, val = value)
         sql = sql[:-1] + sql_where #get rid of the last comma and append the 'WHERE' statement
+#        sql = f'{", ".join( (column_value_pairs[x][0], column_value_pairs[x][1]) for x in range(len(column_value_pairs)))}'
+#        sql = sql + sql_where #get rid of the last comma and append the 'WHERE' statement
         if show: print('  updating row with sql = \"', sql, '\"')
         self.dbCursor.execute(sql)
 
@@ -896,10 +897,10 @@ class CategorizerData(CategorizerLanguage):
 
     def _addTable(self, table_name):
         show = False
-        if show: print('in _addTable() with table_name', table_name)
+        if show: print(f'in _addTable() with table_name {table_name}')
         columnSpec = self.columnSpecs[table_name]
-        if show: print('  columnSpec', columnSpec)
-        self.db.execute('CREATE TABLE ' + table_name + ' (' + columnSpec + ')')
+        if show: print(f'  columnSpec {columnSpec}')
+        self.db.execute(f'CREATE TABLE {table_name} ({columnSpec})')
         if show:
             print('sqlAdds', self.sqlAdds[table_name])
             print('tableInits', self.tableInits[table_name])
@@ -907,7 +908,7 @@ class CategorizerData(CategorizerLanguage):
         self.db.commit()
 
     def _closePathRev(self):
-        show = True
+        show = False
         if show: print('in _closePathRev()')
         sql = f'SELECT MAX({self.columnNames["pathRevs"][0]}) FROM pathRevs'
         cursor = self.dbCursor.execute(sql)
@@ -964,7 +965,7 @@ class CategorizerData(CategorizerLanguage):
 
         # add the table if necessary
         try:
-            self.dbCursor.execute('select MAX(id) FROM ' + table_name)
+            self.dbCursor.execute(f'select MAX(id) FROM {table_name}')
         except sqlite3.OperationalError:
             self.addTable(table_name)
 
@@ -978,7 +979,7 @@ class CategorizerData(CategorizerLanguage):
                     str(noteText),
                     str(date),
                     str(owner),
-                 )
+                )
             except:
                 print('  ERROR in add note for note', notes[i])
         if show: print('  making changes to the database')
