@@ -565,6 +565,76 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         self.compareTuples('nodeStyles', self.expDataa['nodeStyles'], actNodeStyles, show)
         self.compareTuples('fonts', self.expDataa['fonts'], actFonts, show)
 
+    def test_15_editConnectionStyle(self):
+        '''
+        '''
+        if not self.runAll:
+            if 15 not in self.runTestCounts:
+                return
+        show = False
+        print('  test_15_editConnectionStyle')
+        db = CategorizerData(self.path, self.lock)
+        editConnStyles = (
+            #styleName,  , headId, headType, headColor
+            (1, 'Typical'   ,
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (None,      None,       None,     None,    None),
+             #lineId, lineType, lineWeight, lineColor
+             (None,      None,   None,         None),
+             #headId, headType, headSize, headColor
+             (None,     None,     None,     None),),
+            (2, None,
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (None, 'Times New Roman', 'Bold', 16, 'Black'),
+             #lineId, lineType, lineWeight, lineColor
+             (None, 'Solid',   4,  'Black'),
+             #headId, headType, headSize, headColor
+             (None,  'Filled',  8, 'Black'),),
+            #styleName,  , headId, headType, headColor
+            (3, None,
+             #fontId, fontfamily, fontStyle, fontSize, fontColor,
+             (1,      None,       None,     None,    None),
+             #lineId, lineType, lineWeight, lineColor
+             (2,      None,   None,         None),
+             #headId, headType, headSize, headColor
+             (2,     None,     None,     None),),
+        )            
+        newConnectionStyles = (
+            #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgroundColor, transparency, validForLatest
+            (1, 1, 'Typical', 'TPKL', '', 0, 0, 0, 1),
+            (2, 1, 'heavy', 'HF', '', 4, 2, 2, 1),
+            (3, 1, 'heavyVerdana', 'HFFR', '', 1, 2, 2, 1),
+        )
+        newFonts = (
+            (4, 1, 'Times New Roman', 'Bold', 16, 'Black', 1),
+        )
+        newLines = (
+            (2, 1, 'Solid', 4, 'Black', 1),
+        )
+        newHeads = (
+            (2, 1, 'Filled', 8, 'Black', 1),
+        )
+        if show: self.showTables(db, ('fonts', 'lines', 'heads', 'connectionStyles') )
+        for (connStyleId, styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in editConnStyles:
+            tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
+            tmpLineSet = self.lineSet(lineType, lineWeight, lineColor)
+            tmpHeadSet = self.headSet(headType, headSize, headColor) 
+           #                from       to              use one of these or neither
+            db.editConnectionStyle(connStyleId, styleName, fontId, tmpFontSet, lineId, tmpLineSet, headId, tmpHeadSet)
+        self._addExpDataa('connectionStyles', newConnectionStyles)
+        self._addExpDataa('fonts', newFonts)
+        self._addExpDataa('lines', newLines)
+        self._addExpDataa('heads', newHeads)
+
+        actConnectionStyles = db.dumpTable('connectionStyles')
+        actFonts = db.dumpTable('fonts')
+        actLines = db.dumpTable('lines')
+        actHeads = db.dumpTable('heads')
+        self.compareTuples('connectionStyles', self.expDataa['connectionStyles'], actConnectionStyles, show)
+        self.compareTuples('fonts', self.expDataa['fonts'], actFonts, show)
+        self.compareTuples('lines', self.expDataa['lines'], actLines, show)
+        self.compareTuples('heads', self.expDataa['heads'], actHeads, show)
+
     def test_20_findCategoryIds(self):
         '''
         '''

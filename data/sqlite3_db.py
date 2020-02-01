@@ -629,7 +629,7 @@ class CategorizerData(CategorizerLanguage):
             #change the font_id if different
             newValues[5] = font_id
             newIdxs.append(5)
-        elif font_set != None and font_set.count(None) < 4:
+        elif font_set != None and font_set.count(None) < len(font_set):
             #the font_set exists and there is not a font_id
             # see if the font_set exists, if it does get the fontId, if it doesn't create a new font and get the id
             fontId = self._getSubTableRowId('fonts', font_set)
@@ -667,6 +667,79 @@ class CategorizerData(CategorizerLanguage):
             for (oldIdx, oldRowDatum) in zip(oldIdxs, oldRowData):
                 newValues[oldIdx] = oldRowDatum
             self.dbCursor.execute(self.sqlAdds['nodeStyles'], (node_style_id, pathRev) + tuple(newValues[2:-1]) + (1,))
+
+    def editConnectionStyle(self, connection_style_id, name = None, font_id = None, font_set = None, line_id = None, line_set = None, head_id = None, head_set = None):
+        '''
+        change one or more of font_id/font_set, line_id/line_set, head_id/head_set
+        if a note has been added since this nodeStyleId was edited, a new row will be created and the old row will be marked not valid for latest.
+        if not, the existing row will be changed.
+        '''
+        show = False
+        if show: print(f'in editConnectionStyle() with connection_style_id {connection_style_id}, name {name}, font_id {font_id}, font_set {font_set}, line_id {line_id}, line_set {line_set}, head_id {head_id}, head_set {head_set}')
+        pathRev = self._getPathRev()
+        (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('connectionStyles', connection_style_id)
+        newName, newDMetaName0, newDMetaName1, newFontId, newLineId, newHeadId = None, None, None, None, None, None
+        newValues = [None] * len(self.columnNames['connectionStyles'])
+        newIdxs = []
+        if name != None:
+            (dMetaName0, dMetaName1) = self.getDMetaNames(name)
+            newValues[2], newValues[3], newValues[4] = f'{name}', f'{dMetaName0}', f'{dMetaName1}'
+            newIdxs += [2,3,4]
+        if font_id != None:
+            #change the font_id if different
+            newValues[5] = font_id
+            newIdxs.append(5)
+        elif font_set != None and font_set.count(None) < len(font_set):
+            #the font_set exists and there is not a font_id
+            # see if the font_set exists, if it does get the fontId, if it doesn't create a new font and get the id
+            fontId = self._getSubTableRowId('fonts', font_set)
+            newValues[5] = fontId
+            newIdxs.append(5)
+        if line_id != None:
+            newValues[6] = line_id
+            newIdxs.append(6)
+        elif line_set != None and line_set.count(None) < len(line_set):
+            lineId = self._getSubTableRowId('lines', line_set)
+            newValues[6] = lineId
+            newIdxs.append(6)
+        if head_id != None:
+            newValues[7] = head_id
+            newIdxs.append(7)
+        elif head_set != None and head_set.count(None) < len(head_set):
+            headId = self._getSubTableRowId('heads', head_set)
+            newValues[7] = headId
+            newIdxs.append(7)
+
+        if show: print('  newValues', newValues, ', newIdxs', newIdxs)
+        if len(newIdxs) == 0:
+            # this method was called, but no changes were asked for
+            return
+        
+        if rowPathRev == pathRev:
+            if show: print('  rowPathRev == pathRev, updating data:')
+            colValPairs = [ (self.columnNames['connectionStyles'][x], newValues[x]) for x in newIdxs ]
+            self._editRow('connectionStyles', colValPairs, sqlWhere)
+        else:
+            if show: print('  rowPathRev != pathRev, create a new row')
+            # get the data for the existing row which was not specified in the arguments of this method
+            oldIdxs = []
+            for i in range(1, len(self.columnNames['connectionStyles']) - 1):
+                if newValues[i] == None:
+                    oldIdxs.append(i)
+            sql = f"SELECT {', '.join([self.columnNames['connectionStyles'][x] for x in oldIdxs])} FROM connectionStyles {sqlWhere}"
+            if show: print('    sql:', sql)
+            cursor = self.dbCursor.execute(sql)
+            oldRowData = cursor.fetchone()
+            if show: print('    oldRowData:', oldRowData, ', oldIdxs', oldIdxs)
+
+            # mark the old row not valid for latest
+            sql = f'UPDATE connectionStyles set {self.columnNames["connectionStyles"][-1]} = 0 {sqlWhere}'
+            self.dbCursor.execute(sql)
+
+            # combine the old and new data and write a new row
+            for (oldIdx, oldRowDatum) in zip(oldIdxs, oldRowData):
+                newValues[oldIdx] = oldRowDatum
+            self.dbCursor.execute(self.sqlAdds['connectionStyles'], (connection_style_id, pathRev) + tuple(newValues[2:-1]) + (1,))
 
     def addConnectionStyle(self, style_name, font_id = None, font_set = None, line_id = None, line_set = None, head_id = None, head_set = None):
         '''
