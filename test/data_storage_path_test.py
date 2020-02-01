@@ -44,6 +44,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         if not self.runAll:
             if 0 not in self.runTestCounts:
                 return
+        print('\nDataStorageSameRevPathTest')
         print('  test_00_instantiate')
         db = CategorizerData(self.path, self.lock)
         

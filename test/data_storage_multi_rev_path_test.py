@@ -13,7 +13,7 @@ from test_utils import TestUtils
 # start with the default values as defined in the class
 # as test are run, things are added and changed in the database,
 # and things are added and changed to the expect dataa
-class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
+class DataStorageMultiRevPathTest(unittest.TestCase, TestUtils):
     runAll = False
     runTestCounts = list(range(22))
     fontSet = CategorizerLanguage.FontSet
@@ -38,6 +38,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         if not self.runAll:
             if 0 not in self.runTestCounts:
                 return
+        print('\nDataStorageMultiRevPathTest')
         print('  test_00_instantiate')
         db = CategorizerData(self.path, self.lock)
         

@@ -313,13 +313,13 @@ class CategorizerData(CategorizerLanguage):
             if show: print('  rowPathRev == pathRev, updating data:')
             colValPairs = []
             if cat_node_id != None:
-                colValPairs.append( (self.columnNames['catConnections'][2], '\"' + str(cat_node_id) + '\"') )
+                colValPairs.append( (self.columnNames['catConnections'][2], cat_node_id) )
             if super_cat_node_id != None:
-                colValPairs.append( (self.columnNames['catConnections'][3], '\"' + str(super_cat_node_id) + '\"') )
+                colValPairs.append( (self.columnNames['catConnections'][3], super_cat_node_id) )
             if rel_var_id != None:
-                colValPairs.append( (self.columnNames['catConnections'][4], '\"' + str(rel_var_id) + '\"') )
+                colValPairs.append( (self.columnNames['catConnections'][4], rel_var_id) )
             if conn_style_id != None:
-                colValPairs.append( (self.columnNames['catConnections'][5], '\"' + str(conn_style_id) + '\"') )
+                colValPairs.append( (self.columnNames['catConnections'][5], conn_style_id) )
             self._editRow('catConnections', colValPairs, sqlWhere)
         else:
             if show: print('  rowPathRev != pathRev, marking existing row to not validForLatest and creating new row:')
@@ -538,9 +538,9 @@ class CategorizerData(CategorizerLanguage):
         if rowPathRev == pathRev:
             if show: print('  rowPathRev == pathRev, updating data:')
             colValPairs = [
-                (self.columnNames['categories'][2], '\"' + cat_name + '\"'), 
-                (self.columnNames['categories'][3], '\"' + dMetaName0 + '\"'), 
-                (self.columnNames['categories'][4], '\"' + dMetaName1 + '\"'), 
+                (self.columnNames['categories'][2], cat_name), 
+                (self.columnNames['categories'][3], dMetaName0), 
+                (self.columnNames['categories'][4], dMetaName1), 
             ]
             self._editRow('categories', colValPairs, sqlWhere)
             #do I need to change the default catVariant (the one with None for a name also?) 
@@ -564,9 +564,9 @@ class CategorizerData(CategorizerLanguage):
         if rowPathRev == pathRev:
             if show: print('  rowPathRev == pathRev, updating data:')
             colValPairs = [
-                (self.columnNames['catVariants'][3], '\"' + cat_var_name + '\"'),
-                (self.columnNames['catVariants'][4], '\"' + dMetaName0 + '\"'),
-                (self.columnNames['catVariants'][5], '\"' + dMetaName1 + '\"'),
+                (self.columnNames['catVariants'][3], cat_var_name),
+                (self.columnNames['catVariants'][4], dMetaName0),
+                (self.columnNames['catVariants'][5], dMetaName1),
             ]
             self._editRow('catVariants', colValPairs, sqlWhere)
             #do I need to change the default catVariant (the one with None for a name also?) 
@@ -619,38 +619,32 @@ class CategorizerData(CategorizerLanguage):
         pathRev = self._getPathRev()
         (rowPathRev, sqlWhere) = self._getRowPathRevAndSQLWhere('nodeStyles', node_style_id)
         newName, newDMetaName0, newDMetaName1, newFontId, newBackgroundColor, newTransparency = None, None, None, None, None, None
-        newValuesStr = [None] * len(self.columnNames['nodeStyles'])
         newValues = [None] * len(self.columnNames['nodeStyles'])
         newIdxs = []
         if name != None:
             (dMetaName0, dMetaName1) = self.getDMetaNames(name)
-            newValuesStr[2], newValuesStr[3], newValuesStr[4] = f'"{name}"', f'"{dMetaName0}"', f'"{dMetaName1}"'
             newValues[2], newValues[3], newValues[4] = f'{name}', f'{dMetaName0}', f'{dMetaName1}'
             newIdxs += [2,3,4]
         if font_id != None:
             #change the font_id if different
-            newValuesStr[5] = font_id
             newValues[5] = font_id
             newIdxs.append(5)
         elif font_set != None and font_set.count(None) < 4:
             #the font_set exists and there is not a font_id
             # see if the font_set exists, if it does get the fontId, if it doesn't create a new font and get the id
             fontId = self._getSubTableRowId('fonts', font_set)
-            newValuesStr[5] = fontId
             newValues[5] = fontId
             newIdxs.append(5)
         if background_color != None:
-            newValuesStr[6] = f'"{background_color}"'
             newValues[6] = f'{background_color}'
             newIdxs.append(6)
         if transparency != None:
-            newValuesStr[7] = transparency
             newValues[7] = transparency
             newIdxs.append(7)
 
         if rowPathRev == pathRev:
             if show: print('  rowPathRev == pathRev, updating data:')
-            colValPairs = [ (self.columnNames['nodeStyles'][x], newValuesStr[x]) for x in newIdxs ]
+            colValPairs = [ (self.columnNames['nodeStyles'][x], newValues[x]) for x in newIdxs ]
             self._editRow('nodeStyles', colValPairs, sqlWhere)
         else:
             if show: print('  rowPathRev != pathRev, create a new row')
@@ -884,10 +878,12 @@ class CategorizerData(CategorizerLanguage):
         if show: print(f'in _editRow() with table_name {table_name}, column_value_pairs {column_value_pairs}, sql_where {sql_where}')
         sql = f'UPDATE {table_name} SET'
         for (columnName, value) in column_value_pairs:
-            sql += ' {col} = {val},'.format(col = columnName, val = value)
+            if type(value) == self.typeStr:
+                sql += f' {columnName} = "{value}",'
+            else:
+                sql += f' {columnName} = {value},'
         sql = sql[:-1] + sql_where #get rid of the last comma and append the 'WHERE' statement
 #        sql = f'{", ".join( (column_value_pairs[x][0], column_value_pairs[x][1]) for x in range(len(column_value_pairs)))}'
-#        sql = sql + sql_where #get rid of the last comma and append the 'WHERE' statement
         if show: print('  updating row with sql = \"', sql, '\"')
         self.dbCursor.execute(sql)
 
