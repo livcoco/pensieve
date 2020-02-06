@@ -1,10 +1,6 @@
 '''
 history
-12/19/18 - 
-    add try for test01, 
-    r'SELECT... == "{}"'.format(catname)
-    change to try: instead of return False
-
+1/23/20 - created from data_storage_path_test.py
 '''
 import unittest
 import multiprocessing
@@ -17,13 +13,12 @@ from test_utils import TestUtils
 # start with the default values as defined in the class
 # as test are run, things are added and changed in the database,
 # and things are added and changed to the expect dataa
-class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
-    runAll = True
-    runTestCounts = list(range(15))
+class DataStorageMultiRevPathTest(unittest.TestCase, TestUtils):
+    runAll = False
+    runTestCounts = list(range(19))
     fontSet = CategorizerLanguage.FontSet
     lineSet = CategorizerLanguage.LineSet
     headSet = CategorizerLanguage.HeadSet
-    
     expDataa = {
         'categories'      : [CategorizerData.tableInits['categories']],
         'catVariants'     : [CategorizerData.tableInits['catVariants']],
@@ -37,14 +32,13 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         'lines'           : [CategorizerData.tableInits['lines']],
         'heads'           : [CategorizerData.tableInits['heads']],
     }
-    path = './test.db'
+    path = './multi_path_test.db'
     lock = multiprocessing.Lock()
-    
     def test_00_instantiate(self):
         if not self.runAll:
             if 0 not in self.runTestCounts:
                 return
-        print('\nDataStorageSameRevPathTest')
+        print('\nDataStorageMultiRevPathTest')
         print('  test_00_instantiate')
         db = CategorizerData(self.path, self.lock)
         
@@ -64,13 +58,17 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 return
         show = False
         print('  test_02_addCategory')
-        addCats = ('Farm', 'Horse', 'Pig', 'Dog')
+        addCatsA = ( 'Farm', 'Horse',   'Pig', 'Dog')
+        addCatsB = ('Moose',   'Elk', 'Bison')
         newExpCats = (
             #catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
             (1, 1,  'Farm', 'FRM', '', 1),
             (2, 1, 'Horse', 'HRS', '', 1),
-            (3, 1,   'Pig', 'PK', '', 1),
-            (4, 1,   'Dog', 'TK', '', 1),
+            (3, 1,   'Pig',  'PK', '', 1),
+            (4, 1,   'Dog',  'TK', '', 1),
+            (5, 2, 'Moose',  'MS', '', 1),
+            (6, 2,   'Elk', 'ALK', '', 1),
+            (7, 2, 'Bison', 'PSN', '', 1),
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catVarName, dMetaName0, dMetaName1, validForLatest
@@ -78,10 +76,17 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             (2, 1, 2,   None, '', '', 1),
             (3, 1, 3,   None, '', '', 1),
             (4, 1, 4,   None, '', '', 1),
+            (5, 2, 5,   None, '', '', 1),
+            (6, 2, 6,   None, '', '', 1),
+            (7, 2, 7,   None, '', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for idx, cat in enumerate(addCats):
+        for idx, cat in enumerate(addCatsA):
             db._addCategory(cat)
+        db.addNote('test note 1')
+        for idx, cat in enumerate(addCatsB):
+            db._addCategory(cat)
+            
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
@@ -95,21 +100,33 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 return
         show = False
         print('  test_03_addCategoryVariant')
-        addCatVars = (
+        addCatVarsA = (
             #skip variant for Farm
-            (2,  'horsey'),
-            (3,   'piggy'),
-            (4,  'doggie'),
+            (2, 'horsey'),
+            (3,  'piggy'),
+            (4, 'doggie'),
+        )
+        addCatVarsB = (
+            (5,  'moosey'),
+            (6,    'elky'),
+            (7, 'bisoney'),
         )
         newExpCatVars = (
             #skip variant for Farm
-            (5, 1, 2,  'horsey', 'HRS', '', 1),
-            (6, 1, 3,   'piggy', 'PK', '',  1),
-            (7, 1, 4,  'doggie', 'TJ', 'TK',  1),
+            (8, 2, 2, 'horsey', 'HRS',   '', 1),
+            (9, 2, 3,  'piggy',  'PK',   '', 1),
+            (10, 2, 4, 'doggie',  'TJ', 'TK', 1),
+            (11, 3, 5, 'moosey',  'MS', '', 1),
+            (12, 3, 6, 'elky',  'ALK', '', 1),
+            (13, 3, 7, 'bisoney',  'PSN', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for (catId, catVarName) in addCatVars:
+        for (catId, catVarName) in addCatVarsA:
             db._addCatVariant(catId, catVarName)
+        db.addNote('test note 1')
+        for (catId, catVarName) in addCatVarsB:
+            db._addCatVariant(catId, catVarName)
+        
         self._addExpDataa('catVariants', newExpCatVars)
         actCats = db.dumpTable('categories')
         self.compareTuples('categories', self.expDataa['categories'], actCats, show)
@@ -122,7 +139,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 return
         show = False
         print('  test_04_addCatNode')
-        addCatNodes = (
+        addCatNodesA = (
             #cat_var_id, cat_var_name
             (1, None),
             (2, None),
@@ -131,27 +148,42 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             (None, 'cow'),
             (None, 'sheep'),
         )
+        addCatNodesB = (
+            #cat_var_id, cat_var_name
+            (None, 'emu'),
+            (None, 'chicken'),
+        )
         newExpCatNodes = (
             #catNodeId, pathRev, catVarId, dx, dy, nodeStyleId, validForLatest
-            (1, 1, 1,  None, None, None, 0, 1),
-            (2, 1, 2,  None, None, None, 0, 1),
-            (3, 1, 5,  None, None, None, 0, 1),
-            (4, 1, 6,  None, None, None, 0, 1),
-            (5, 1, 8,  None, None, None, 0, 1),
-            (6, 1, 9,  None, None, None, 0, 1),
+            (1, 3, 1,  None, None, None, 0, 1),
+            (2, 3, 2,  None, None, None, 0, 1),
+            (3, 3, 5,  None, None, None, 0, 1),
+            (4, 3, 6,  None, None, None, 0, 1),
+            (5, 3, 14,  None, None, None, 0, 1),
+            (6, 3, 15,  None, None, None, 0, 1),
+            (7, 4, 16,  None, None, None, 0, 1),
+            (8, 4, 17,  None, None, None, 0, 1),
         )
         newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (5, 1,   'cow', 'K', 'KF',1),
-            (6, 1,   'sheep', 'XP', '', 1),
+            (8, 3,   'cow', 'K', 'KF',1),
+            (9, 3,   'sheep', 'XP', '', 1),
+            (10, 4,   'emu', 'AM', '',1),
+            (11, 4,   'chicken', 'XKN', '', 1),
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
-            (8, 1, 5,  None, '', '', 1),
-            (9, 1, 6,  None, '', '', 1),
+            (14, 3, 8,  None, '', '', 1),
+            (15, 3, 9,  None, '', '', 1),
+            (16, 4, 10,  None, '', '', 1),
+            (17, 4, 11,  None, '', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for (catVarId, catVarName) in addCatNodes:
+        if show: self.showTables(db, ('categories', 'catVariants', 'catNodes'))
+        for (catVarId, catVarName) in addCatNodesA:
+            db.addCatNode(catVarId, catVarName)
+        db.addNote('test note 1')
+        for (catVarId, catVarName) in addCatNodesB:
             db.addCatNode(catVarId, catVarName)
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
@@ -170,29 +202,36 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 return
         show = False
         print('  test_05_addRelation')
-        addRels = (
+        addRelsA = (
             #prefix, relName, direction
             ('hyper', 'is-a', 'out'),
             ('super', 'has-a', 'in'),
+        )
+        addRelsB = (
+            #prefix, relName, direction
             ('pre', 'prior in sequence', 'out'),
             ('pre', 'prior in cycle', 'out'),
         )
         expRels = (
             #relId*, pathRev*, prefix, relName, dMetaName0, dMetaName1, direction, validForLatest
-            (1, 1, 'hyper', 'is-a', 'AS', '', 'out', 1),
-            (2, 1, 'super', 'has-a', 'HS', '', 'in', 1),
-            (3, 1, 'pre', 'prior in sequence', 'PRRN', '', 'out',1),
-            (4, 1, 'pre', 'prior in cycle', 'PRRN', '', 'out', 1),
+            (1, 4, 'hyper', 'is-a', 'AS', '', 'out', 1),
+            (2, 4, 'super', 'has-a', 'HS', '', 'in', 1),
+            (3, 5, 'pre', 'prior in sequence', 'PRRN', '', 'out',1),
+            (4, 5, 'pre', 'prior in cycle', 'PRRN', '', 'out', 1),
         )
         expRelVars = (
             #relVarId*, pathRev*, relId, relVarPrefix, relVarName, varDirection, validForLatest
-            (1, 1, 1,   None, None, '', '', None, 1),
-            (2, 1, 2,   None, None, '', '', None, 1),
-            (3, 1, 3,   None, None, '', '', None, 1),
-            (4, 1, 4,   None, None, '', '', None, 1),
+            (1, 4, 1,   None, None, '', '', None, 1),
+            (2, 4, 2,   None, None, '', '', None, 1),
+            (3, 5, 3,   None, None, '', '', None, 1),
+            (4, 5, 4,   None, None, '', '', None, 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for (relPrefix, relName, direction) in addRels:
+        if show: self.showTables(db, ('relations', 'relVariants'))
+        for (relPrefix, relName, direction) in addRelsA:
+            db._addRelation(relPrefix, relName, direction)
+        db.addNote('test note 1')
+        for (relPrefix, relName, direction) in addRelsB:
             db._addRelation(relPrefix, relName, direction)
         self._addExpDataa('relations', expRels)
         self._addExpDataa('relVariants', expRelVars)
@@ -207,20 +246,27 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 return
         show = False
         print('  test_06_addRelationVariant')
-        addRelVars = (
+        addRelVarsA = (
             #relId, relVarPrefix, relVarName, varDirection
             (2, None, 'reverse has-a', 'out'),
+        )
+        addRelVarsB = (
+            #relId, relVarPrefix, relVarName, varDirection
             (3, 'prePIS', 'PIS', None),
             (4, 'prePIC', 'PIC', None),
         )
         newExpRelVars = (
             #relVarId, pathRev, relId, relVarPrefix, relVarName, varDirection, validForLatest
-            (5, 1, 2, None, 'reverse has-a', 'RFRS', '', 'out', 1), #new relation variant for relId 2 with new direction
-            (6, 1, 3, 'prePIS', 'PIS', 'PS', '', None, 1), #new relation variant for relId 3
-            (7, 1, 4, 'prePIC', 'PIC', 'PK', '', None, 1), #new relation variant for relId 4
+            (5, 5, 2, None, 'reverse has-a', 'RFRS', '', 'out', 1), #new relation variant for relId 2 with new direction
+            (6, 6, 3, 'prePIS', 'PIS', 'PS', '', None, 1), #new relation variant for relId 3
+            (7, 6, 4, 'prePIC', 'PIC', 'PK', '', None, 1), #new relation variant for relId 4
         )
         db = CategorizerData(self.path, self.lock)
-        for (relId, relVarPrefix, relVarName, direction) in addRelVars:
+        if show: self.showTables(db, ('relations', 'relVariants'))
+        for (relId, relVarPrefix, relVarName, direction) in addRelVarsA:
+            db._addRelVariant(relId, relVarPrefix, relVarName, direction)
+        db.addNote('test note 1')
+        for (relId, relVarPrefix, relVarName, direction) in addRelVarsB:
             db._addRelVariant(relId, relVarPrefix, relVarName, direction)
         self._addExpDataa('relVariants', newExpRelVars)
         actRelVars = db.dumpTable('relVariants')
@@ -238,27 +284,34 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         show = False
         print('  test_07_addConnection')
         db = CategorizerData(self.path, self.lock)
-        addConns = (
+        addConnsA = (
             #catNodeId, superCatNodeId, relVarId, connStyleId
-            (4, 3, 3, None), #1 create a connection from relVarId 3, i.e. 
-            (4, 3, 0, None), #2 just make an unspecified connection, (default relationVariant)
+            (4, 3,    3,  None), #1 create a connection from relVarId 3, i.e. 
+            (4, 3,    0,  None), #2 just make an unspecified connection, (default relationVariant)
+        )
+        addConnsB = (
+            #catNodeId, superCatNodeId, relVarId, connStyleId
             (4, 3, None, 'reverse has-a'), #3 make a connection based on an existing relVarName
             (4, 3, None, 'is-a'), #4 make a connection based on an existing relation Name
             (4, 3, None, 'from'), #5 make a connection based on a new relation Name
-            )
+        )
         newExpCatConns = (
             #catConnId, pathRev, catNodeId, superCatNodeId, relVarId, connStyleId validForLatest
-            (1, 1, 4, 3, 3, 0, 1),
-            (2, 1, 4, 3, 0, 0, 1),
-            (3, 1, 4, 3, 5, 0, 1),
-            (4, 1, 4, 3, 1, 0, 1),
-            (5, 1, 4, 3, 8, 0, 1),
+            (1, 6, 4, 3, 3, 0, 1),
+            (2, 6, 4, 3, 0, 0, 1),
+            (3, 7, 4, 3, 5, 0, 1),
+            (4, 7, 4, 3, 1, 0, 1),
+            (5, 7, 4, 3, 8, 0, 1),
         )
-        for (catNodeId, superCatNodeId, relVarId, relVarName) in addConns:
+        if show: self.showTables(db, ('catConnections',))
+        for (catNodeId, superCatNodeId, relVarId, relVarName) in addConnsA:
+            #                from       to              use one of these or neither
+            db.addConnection(catNodeId, superCatNodeId, relVarId, relVarName)
+        db.addNote('test note 1')
+        for (catNodeId, superCatNodeId, relVarId, relVarName) in addConnsB:
             #                from       to              use one of these or neither
             db.addConnection(catNodeId, superCatNodeId, relVarId, relVarName)
         self._addExpDataa('catConnections', newExpCatConns)
-        
         actCatConns = db.dumpTable('catConnections')
         self.compareTuples('catConnections', self.expDataa['catConnections'], actCatConns, show)
 
@@ -276,34 +329,45 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         show = False
         print('  test_08_editCatNode')
         editCatNodes = (
-            #catNodeId, newCatVarId, newDx, newDy, newDz
-            (1, 2, None, None, None, None), #change from 1: 'Farm' to 2: 'Horse'
-            (2, 5, None, None, None, None), #change from 2: 'Horse' to 5: 'Horsey'
-            (3, 5, None, 22, None, None), # change dx to 22
-            (4, 6, None, None, None, 37), # change dy to 37
-            (5, 6, None, 11, 15, 4), # change catVarId 6, dx to 11, dy 15
-            (6, None, 'Bird', 9, 7, 5), # add new catVarName 'Bird', change dx to 9, dy 7
+            #catNodeId, catVarId, catVarName, newDx, newDy, newDz
+            (1,    2,   None, None, None, None), #change from 1: 'Farm' to 2: 'Horse'
+            (2,    5,   None, None, None, None), #change from 2: 'Horse' to 5: 'Horsey'
+            (3,    5,   None,   22, None, None), # change dx to 22
+            (4,    6,   None, None, None,   37), # change dy to 37
+            (5,    6,   None,   11,   15,    4), # change catVarId 6, dx to 11, dy 15
+            (6, None, 'Bird',    9,    7,    5), # add new catVarName 'Bird', change dx to 9, dy 7
         )
         newExpCatNodes = (
             #catNodeId, pathRev, catVarId, dx, dy, dz, validForLatest
-            (1, 1, 2,  None, None, None, 0, 1), # catVarId to '2'
-            (2, 1, 5,  None, None, None, 0, 1), # catVarId to '5'
-            (3, 1, 5,  22, None, None, 0, 1), # dx to 22
-            (4, 1, 6,  None, None, 37, 0, 1), # dz to 37
-            (5, 1, 6,  11, 15, 4, 0, 1), # catVarId 6, dx 11, dy 15, dz 4
-            (6, 1, 10,  9, 7, 5, 0, 1),
+            (1, 3, 1, None, None, None, 0, 0),
+            (2, 3, 2, None, None, None, 0, 0),
+            (3, 3, 5, None, None, None, 0, 0),
+            (4, 3, 6, None, None, None, 0, 0),
+            (5, 3, 14, None, None, None, 0, 0),
+            (6, 3, 15, None, None, None, 0, 0),
+
+            (1, 7,  2, None, None, None, 0, 1), # catVarId to '2'
+            (2, 7,  5, None, None, None, 0, 1), # catVarId to '5'
+            (3, 7,  5,   22, None, None, 0, 1), # dx to 22
+            (4, 7,  6, None, None,   37, 0, 1), # dz to 37
+            (5, 7,  6,   11,   15,    4, 0, 1), # catVarId 6, dx 11, dy 15, dz 4
+            (6, 7, 18,    9,    7,    5, 0, 1),
         )
         newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (7, 1,   'Bird', 'PRT', '', 1),
+            (12, 7,   'Bird', 'PRT', '', 1),
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
-            (10, 1, 7,  None, '', '', 1),
+            (18, 7, 12,  None, '', '', 1),
         )
         db = CategorizerData(self.path, self.lock)
+        if show: self.showTables(db, ('categories', 'catVariants', 'catNodes'))
+
         for (catNodeId, newCatVarId, newCatVarName, newDx, newDy, newDz) in editCatNodes:
             db.editCatNode(catNodeId, newCatVarId, newCatVarName, newDx, newDy, newDz)
+        db.addNote('test note 1')
+
         self._addExpDataa('categories', newExpCats)
         self._addExpDataa('catVariants', newExpCatVars)
         self._addExpDataa('catNodes', newExpCatNodes)
@@ -331,12 +395,19 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         )
         newExpCats = (
             #catId, pathRev, catName, validForLatest
-            (2, 1, 'Horses', 'HRSS', '', 1),
-            (3, 1,   'Pigs', 'PKS', '', 1),
-            (4, 1,   'Dogs', 'TKS', '', 1),
-            (5, 1,   'Cows', 'KS', '', 1),
-            (6, 1,  'Sheep', 'XP', '', 1),
-            (7, 1,   'Fowl', 'FL', '', 1),
+            (2, 1, 'Horse', 'HRS', '', 0),
+            (3, 1, 'Pig', 'PK', '', 0),
+            (4, 1, 'Dog', 'TK', '', 0),
+            (5, 2, 'Moose', 'MS', '', 0),
+            (6, 2, 'Elk', 'ALK', '', 0),
+            (7, 2, 'Bison', 'PSN', '', 0),
+
+            (2, 8, 'Horses', 'HRSS', '', 1),
+            (3, 8,   'Pigs', 'PKS', '', 1),
+            (4, 8,   'Dogs', 'TKS', '', 1),
+            (5, 8,   'Cows', 'KS', '', 1),
+            (6, 8,  'Sheep', 'XP', '', 1),
+            (7, 8,   'Fowl', 'FL', '', 1),
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catName, validForLatest
@@ -360,23 +431,28 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         print('  test_10_editCatVariant')
         edits = (
             #cat_var_id, cat_var_name
-            (5, 'horseee'),
-            (6, 'oink oink'),
-            (7, 'woof dog'),
+            (8, 'horseee'),
+            (9, 'oink oink'),
+            (10, 'woof dog'),
         )
         newExpCats = (
             #catId, pathRev, catName, dMetaName0, dMetaName1, validForLatest
         )
         newExpCatVars = (
             #catVarId, pathRev, catId, catName, dMetaName0, dMetaName1, validForLatest
-            (5, 1, 2,  'horseee', 'HRS', '', 1),
-            (6, 1, 3,   'oink oink', 'ANKN', '', 1),
-            (7, 1, 4,  'woof dog', 'AFTK', 'FFTK', 1),
+            (8, 2, 2, 'horsey', 'HRS', '', 0),
+            (9, 2, 3, 'piggy', 'PK', '', 0),
+            (10, 2, 4, 'doggie', 'TJ', 'TK', 0),
+
+            (8, 8, 2,  'horseee', 'HRS', '', 1),
+            (9, 8, 3,   'oink oink', 'ANKN', '', 1),
+            (10, 8, 4,  'woof dog', 'AFTK', 'FFTK', 1),
         )
         db = CategorizerData(self.path, self.lock)
-        for i in range(len(edits)):
-            catVarId = edits[i][0]
-            catVarName = edits[i][1]
+        if show: self.showTables(db, ('categories', 'catVariants'))
+        for (catVarId, catVarName) in edits:
+#            catVarId = edits[i][0]
+#            catVarName = edits[i][1]
             db.editCatVariant(catVarId, catVarName)
 
         self._addExpDataa('catVariants', newExpCatVars)
@@ -406,15 +482,18 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             )
         newExpCatConns = (
             #catConnId, pathRev, catNodeId, superCatNodeId, relVarId, connStyleId validForLatest
-            (2, 1, 3, 4, 0, 0, 1),
-            (3, 1, 4, 3, 1, 0, 1),
-            (5, 1, 4, 3, 5, 0, 1),
+            (2, 6, 4, 3, 0, 0, 0),
+            (3, 7, 4, 3, 5, 0, 0),
+            (5, 7, 4, 3, 8, 0, 0),
+            (2, 8, 3, 4, 0, 0, 1),
+            (3, 8, 4, 3, 1, 0, 1),
+            (5, 8, 4, 3, 5, 0, 1),
         )
+        if show: self.showTables(db, ('catConnections',))
         for (catConnId, catNodeId, superCatNodeId, relVarId, relVarName, connStyleId) in editConns:
             #                from       to              use one of these or neither
             db.editConnection(catConnId, catNodeId, superCatNodeId, relVarId, relVarName, connStyleId)
         self._addExpDataa('catConnections', newExpCatConns)
-        
         actCatConns = db.dumpTable('catConnections')
         self.compareTuples('catConnections', self.expDataa['catConnections'], actCatConns, show)
 
@@ -427,26 +506,35 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         show = False
         print('  test_12_addNodeStyle')
         db = CategorizerData(self.path, self.lock)
-        addNodeStyles = (
+        addNodeStylesA = (
             #styleName, fontId, fontfamily, fontStyle, fontSize, fontColor, backgroundColor, transparency
             ('typical'   , None,      None,   None, None,    None, None, None),
             ('bigNBold'  , None, 'Verdana', 'Bold',   16, 'Black', None, None), #make new font
+        )
+        addNodeStylesB = (
+            #styleName, fontId, fontfamily, fontStyle, fontSize, fontColor, backgroundColor, transparency
             ('seeThroughRed', None,   None,   None, None,    None, 'Red', 50),
-            ('blueBigNBold', None,'Verdana', 'Bold',   16, 'Black', 'Blue', 30), #get exising font from description
-            ('plainBold', 1,   None,   None, None,    None, 'Black', None), #use existing font by fontId
-            )
+            ('blueBigNBold', None,'Verdana', 'Bold',  16, 'Black', 'Blue', 30), #get exising font from description
+            ('plainBold',        1,   None,   None, None,    None, 'Black', None), #use existing font by fontId
+        )
         newNodeStyles = (
             #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgorundCXolor, transparency, validForLatest
-            (1, 1, 'typical', 'TPKL', '', 0, None, None, 1),
-            (2, 1, 'bigNBold', 'PNPL', 'PKNP', 1, None, None, 1),
-            (3, 1, 'seeThroughRed', 'S0RR', 'STRR', 0, 'Red', 50, 1),
-            (4, 1, 'blueBigNBold', 'PLPN', 'PLPK', 1, 'Blue', 30, 1),
-            (5, 1, 'plainBold', 'PLNP', '', 1, 'Black', None, 1),
+            (1, 8, 'typical', 'TPKL', '', 0, None, None, 1),
+            (2, 8, 'bigNBold', 'PNPL', 'PKNP', 1, None, None, 1),
+            (3, 9, 'seeThroughRed', 'S0RR', 'STRR', 0, 'Red', 50, 1),
+            (4, 9, 'blueBigNBold', 'PLPN', 'PLPK', 1, 'Blue', 30, 1),
+            (5, 9, 'plainBold', 'PLNP', '', 1, 'Black', None, 1),
         )
         newFonts = (
-            (1, 1, 'Verdana', 'Bold', 16, 'Black', 1),
+            (1, 8, 'Verdana', 'Bold', 16, 'Black', 1),
         )
-        for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStyles:
+        if show: self.showTables(db, ('fonts', 'nodeStyles'))
+        for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStylesA:
+            tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
+            #                from       to              use one of these or neither
+            db.addNodeStyle(styleName, fontId, tmpFontSet, backgroundColor, transparency)
+        db.addNote('test note 1')
+        for (styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in addNodeStylesB:
             tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
             #                from       to              use one of these or neither
             db.addNodeStyle(styleName, fontId, tmpFontSet, backgroundColor, transparency)
@@ -467,7 +555,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         show = False
         print('  test_13_addConnectionStyle')
         db = CategorizerData(self.path, self.lock)
-        addConnectionStyles = (
+        addConnectionStylesA = (
             #styleName,  , headId, headType, headColor
             ('typical'   ,
              #fontId, fontfamily, fontStyle, fontSize, fontColor,
@@ -483,6 +571,9 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
              (None, 'Solid',   3,  'Black'),
              #headId, headType, headSize, headColor
              (None,  'Filled',  6, 'Black'),),
+        )
+        addConnectionStylesB = (
+            #styleName,  , headId, headType, headColor
             ('heavyVerdana',
              #fontId, fontfamily, fontStyle, fontSize, fontColor,
              (1,      None,       None,     None,    None),
@@ -493,20 +584,27 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         )
         newConnectionStyles = (
             #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgroundCXolor, transparency, validForLatest
-            (1, 1, 'typical', 'TPKL', '', 0, 0, 0, 1),
-            (2, 1, 'heavy', 'HF', '', 2, 1, 1, 1),
-            (3, 1, 'heavyVerdana', 'HFFR', '', 1, 1, 1, 1),
+            (1, 9, 'typical', 'TPKL', '', 0, 0, 0, 1),
+            (2, 9, 'heavy', 'HF', '', 2, 1, 1, 1),
+            (3, 10, 'heavyVerdana', 'HFFR', '', 1, 1, 1, 1),
         )
         newFonts = (
-            (2, 1, 'Times New Roman', 'Bold', 14, 'Black', 1),
+            (2, 9, 'Times New Roman', 'Bold', 14, 'Black', 1),
         )
         newLines = (
-            (1, 1, 'Solid', 3, 'Black', 1),
+            (1, 9, 'Solid', 3, 'Black', 1),
             )
         newHeads = (
-            (1, 1, 'Filled', 6, 'Black', 1),
+            (1, 9, 'Filled', 6, 'Black', 1),
         )
-        for (styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in addConnectionStyles:
+        for (styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in addConnectionStylesA:
+            tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
+            tmpLineSet = self.lineSet(lineType, lineWeight, lineColor)
+            tmpHeadSet = self.headSet(headType, headSize, headColor) 
+           #                from       to              use one of these or neither
+            db.addConnectionStyle(styleName, fontId, tmpFontSet, lineId, tmpLineSet, headId, tmpHeadSet)
+        db.addNote('test note 1')
+        for (styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in addConnectionStylesB:
             tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
             tmpLineSet = self.lineSet(lineType, lineWeight, lineColor)
             tmpHeadSet = self.headSet(headType, headSize, headColor) 
@@ -544,13 +642,18 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             )
         newNodeStyles = (
             #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgroundColor, transparency, validForLatest
-            (1, 1, 'Typical', 'TPKL', '', 0, None, None, 1),
-            (2, 1, 'bigNBold', 'PNPL', 'PKNP', 3, None, None, 1),
-            (4, 1, 'blueBigNBold', 'PLPN', 'PLPK', 3, 'Purple', 30, 1),
-            (5, 1, 'plainBold', 'PLNP', '', 1, 'Black', 25, 1),
+            (1, 8, 'typical', 'TPKL', '', 0, None, None, 0),
+            (2, 8, 'bigNBold', 'PNPL', 'PKNP', 1, None, None, 0),
+            (4, 9, 'blueBigNBold', 'PLPN', 'PLPK', 1, 'Blue', 30, 0),
+            (5, 9, 'plainBold', 'PLNP', '', 1, 'Black', None, 0),
+
+            (1, 10, 'Typical', 'TPKL', '', 0, None, None, 1),
+            (2, 10, 'bigNBold', 'PNPL', 'PKNP', 3, None, None, 1),
+            (4, 10, 'blueBigNBold', 'PLPN', 'PLPK', 3, 'Purple', 30, 1),
+            (5, 10, 'plainBold', 'PLNP', '', 1, 'Black', 25, 1),
         )
         newFonts = (
-            (3, 1, 'Verdana', 'Bold', 18, 'Black', 1),
+            (3, 10, 'Verdana', 'Bold', 18, 'Black', 1),
         )
         if show: self.showTables(db, ('fonts', 'nodeStyles') )
         for (nodeStyleId, styleName, fontId, fontFamily, fontStyle, fontSize, fontColor, backgroundColor, transparency) in editNodeStyles:
@@ -559,7 +662,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
             db.editNodeStyle(nodeStyleId, styleName, fontId, tmpFontSet, backgroundColor, transparency)
         self._addExpDataa('nodeStyles', newNodeStyles)
         self._addExpDataa('fonts', newFonts)
-        
+
         actNodeStyles = db.dumpTable('nodeStyles')
         actFonts = db.dumpTable('fonts')
         self.compareTuples('nodeStyles', self.expDataa['nodeStyles'], actNodeStyles, show)
@@ -601,19 +704,24 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         )            
         newConnectionStyles = (
             #nodeStyleId, pathRev, styleName, dMetaName0, dMetaName1, fontId, backgroundColor, transparency, validForLatest
-            (1, 1, 'Typical', 'TPKL', '', 0, 0, 0, 1),
-            (2, 1, 'heavy', 'HF', '', 4, 2, 2, 1),
-            (3, 1, 'heavyVerdana', 'HFFR', '', 1, 2, 2, 1),
+            (1, 9, 'typical', 'TPKL', '', 0, 0, 0, 0),
+            (2, 9, 'heavy', 'HF', '', 2, 1, 1, 0),
+            (3, 10, 'heavyVerdana', 'HFFR', '', 1, 1, 1, 0),
+
+            (1, 11, 'Typical', 'TPKL', '', 0, 0, 0, 1),
+            (2, 11, 'heavy', 'HF', '', 4, 2, 2, 1),
+            (3, 11, 'heavyVerdana', 'HFFR', '', 1, 2, 2, 1),
         )
         newFonts = (
-            (4, 1, 'Times New Roman', 'Bold', 16, 'Black', 1),
+            (4, 11, 'Times New Roman', 'Bold', 16, 'Black', 1),
         )
         newLines = (
-            (2, 1, 'Solid', 4, 'Black', 1),
+            (2, 11, 'Solid', 4, 'Black', 1),
         )
         newHeads = (
-            (2, 1, 'Filled', 8, 'Black', 1),
+            (2, 11, 'Filled', 8, 'Black', 1),
         )
+        db.addNote('test note 1')
         if show: self.showTables(db, ('fonts', 'lines', 'heads', 'connectionStyles') )
         for (connStyleId, styleName, (fontId, fontFamily, fontStyle, fontSize, fontColor), (lineId, lineType, lineWeight, lineColor), (headId, headType, headSize, headColor)) in editConnStyles:
             tmpFontSet = self.fontSet(fontFamily, fontStyle, fontSize, fontColor)
@@ -667,7 +775,7 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
                 else: print()
             else:
                 self.assertEqual(expCatIds, actCatIds)
-                
+
     def test_21_findCatVariantIds(self):
         '''
         '''
@@ -686,9 +794,9 @@ class DataStorageSameRevPathTest(unittest.TestCase, TestUtils):
         )
         expCatVarIdss = (
             (0,),
-            (2, 5),
-            (3, 6),
-            (4, 7),
+            (2, 8),
+            (3, 9),
+            (4, 10),
         )
         if show: self.showTables(db, ('categories', 'catVariants'))
         for (name, onlyLatest), expCatVarIds in zip(findNames, expCatVarIdss):
